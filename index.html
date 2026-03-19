@@ -28,7 +28,7 @@
 const viewer = new Cesium.Viewer('map', { shouldAnimate: true });
 
 // IMPORTANT: replace this after deploying backend
-const socket = new WebSocket("ws://localhost:3000");
+const socket = new WebSocket("ws://https://godseye-osint-dashboard.onrender.com/");
 
 let entities = [];
 let history = [];
