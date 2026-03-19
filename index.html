@@ -1,84 +1,494 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>God’s Eye V7</title>
+<meta charset="UTF-8">
+<title>God's Eye V9 — Live Intel</title>
+<script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
+<link  href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#map{height:100%;overflow:hidden;background:#000}
 
-  <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+/* ── FONTS ── */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600&display=swap');
 
-  <style>
-    html, body, #map {
-      margin: 0;
-      height: 100%;
-      background: black;
-      overflow: hidden;
-    }
+:root{
+  --green:#00ff9d;--cyan:#00d4ff;--red:#ff3b3b;--amber:#ffc000;
+  --panel:rgba(4,10,20,0.93);--border:rgba(0,200,255,0.18);
+  --source-cnn:#cc0000;--source-fox:#003366;--source-bbc:#bb1919;
+  --source-alj:#006d5b;--source-nbc:#fa8c00;--source-reuters:#ff6900;
+  --source-ap:#212121;--source-x:#1a1a2e;
+}
 
-    #hud {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: #00ffcc;
-      font-family: monospace;
-      background: rgba(0,0,0,0.9);
-      padding: 12px;
-      width: 360px;
-    }
-  </style>
+/* ─── SCANLINE OVERLAY ─── */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);
+}
+
+/* ─── PANELS ─── */
+.panel{
+  position:absolute;background:var(--panel);
+  border:1px solid var(--border);border-radius:4px;
+  font-family:'Share Tech Mono',monospace;color:var(--green);font-size:11px;
+}
+
+/* ─── LEFT HUD ─── */
+#hud{top:10px;left:10px;width:350px;max-height:calc(100vh - 20px);
+  display:flex;flex-direction:column;overflow:hidden;}
+
+#hud-top{
+  padding:10px 14px 8px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.sys-title{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;
+  color:#fff;letter-spacing:3px;}
+.sys-sub{font-size:9px;color:var(--cyan);letter-spacing:1px;margin-top:1px;}
+
+#status-row{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.dot{width:7px;height:7px;border-radius:50%;background:#333;transition:background .3s;}
+.dot.live{background:var(--green);animation:blink 1.4s infinite;}
+.dot.warn{background:var(--amber);}
+.dot.err {background:var(--red);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* search */
+#search-wrap{padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+#search{width:100%;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.2);
+  border-radius:3px;color:var(--green);font-family:inherit;font-size:11px;
+  padding:5px 9px;outline:none;}
+#search:focus{border-color:rgba(0,255,157,.5);background:rgba(0,255,157,.1);}
+#search::placeholder{color:rgba(0,255,157,.3);}
+
+/* source filters */
+#src-filters{
+  display:flex;flex-wrap:wrap;gap:4px;padding:7px 10px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.src-btn{
+  padding:2px 7px;border-radius:2px;border:1px solid;cursor:pointer;
+  font-family:inherit;font-size:9px;letter-spacing:.5px;font-weight:600;
+  background:transparent;transition:opacity .15s,background .15s;opacity:1;
+  color:#fff;
+}
+.src-btn.off{opacity:.25;}
+
+/* category toggles */
+#cat-filters{
+  display:flex;flex-wrap:wrap;gap:4px;padding:5px 10px 7px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.cat-btn{
+  display:flex;align-items:center;gap:3px;padding:2px 7px;
+  border-radius:2px;border:1px solid var(--border);cursor:pointer;
+  font-family:inherit;font-size:9px;background:transparent;
+  color:var(--cyan);transition:opacity .15s;
+}
+.cat-btn.off{opacity:.25;}
+
+/* stats bar */
+#stats{
+  display:flex;gap:12px;padding:5px 12px;border-bottom:1px solid var(--border);
+  font-size:10px;color:rgba(0,255,157,.5);flex-shrink:0;
+}
+#stats span{color:var(--green);}
+
+/* event list */
+#event-list{overflow-y:auto;flex:1;}
+#event-list::-webkit-scrollbar{width:3px;}
+#event-list::-webkit-scrollbar-thumb{background:var(--border);}
+
+.ev{
+  display:flex;align-items:flex-start;gap:8px;padding:7px 12px;
+  cursor:pointer;border-left:2px solid transparent;
+  transition:background .1s,border-color .1s;
+}
+.ev:hover{background:rgba(0,255,157,.05);}
+.ev.sel{background:rgba(0,255,157,.08);border-left-color:var(--green);}
+.ev.threat{border-left-color:var(--red);}
+.ev.warn{border-left-color:var(--amber);}
+.ev .ico{font-size:15px;flex-shrink:0;margin-top:1px;}
+.ev .body{flex:1;min-width:0;}
+.ev .headline{color:#ddd;font-size:10px;line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.ev .meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
+.ev .src-tag{font-size:9px;padding:1px 5px;border-radius:2px;font-weight:600;color:#fff;}
+.ev .loc{font-size:9px;color:var(--cyan);}
+.ev .age{font-size:9px;color:rgba(0,255,157,.4);}
+.ev .sev{width:28px;flex-shrink:0;}
+.ev .sev-bar{height:3px;border-radius:1px;background:var(--green);margin-top:7px;}
+.ev.threat .sev-bar{background:var(--red);}
+.ev.warn  .sev-bar{background:var(--amber);}
+
+#empty{padding:20px 14px;color:rgba(0,255,157,.3);font-size:11px;}
+
+/* ─── RIGHT FEED TICKER ─── */
+#ticker{
+  top:10px;right:10px;width:280px;max-height:calc(100vh - 20px);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+#ticker-head{padding:8px 12px;border-bottom:1px solid var(--border);
+  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
+  color:var(--amber);letter-spacing:2px;flex-shrink:0;}
+#ticker-list{overflow-y:auto;flex:1;}
+#ticker-list::-webkit-scrollbar{width:2px;}
+#ticker-list::-webkit-scrollbar-thumb{background:var(--border);}
+.tick{padding:6px 10px;border-bottom:1px solid rgba(0,200,255,.06);cursor:pointer;}
+.tick:hover{background:rgba(0,200,255,.05);}
+.tick .t-src{font-size:9px;font-weight:600;margin-bottom:2px;}
+.tick .t-hl {font-size:10px;color:#bbb;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.tick .t-age{font-size:9px;color:rgba(0,255,157,.3);margin-top:2px;}
+
+/* ─── TOOLTIP ─── */
+#tooltip{
+  position:fixed;background:rgba(2,8,18,.97);border:1px solid var(--cyan);
+  border-radius:4px;padding:10px 13px;font-family:'Share Tech Mono',monospace;
+  font-size:10px;color:var(--cyan);pointer-events:none;display:none;
+  max-width:260px;line-height:1.8;z-index:9000;
+}
+#tooltip strong{color:#fff;font-size:11px;display:block;margin-bottom:4px;}
+
+/* ─── BOTTOM STATUS BAR ─── */
+#statusbar{
+  position:absolute;bottom:0;left:0;right:0;height:22px;
+  background:rgba(2,8,18,.9);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:20px;
+  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.4);
+}
+#statusbar .sb-item span{color:var(--green);}
+#clock{margin-left:auto;color:var(--amber);}
+
+/* ─── LEGEND ─── */
+#legend{
+  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
+  display:flex;gap:14px;align-items:center;padding:5px 14px;
+  background:rgba(4,10,20,.88);border:1px solid var(--border);border-radius:3px;
+  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.5);
+}
+.leg{display:flex;align-items:center;gap:4px;}
+.leg-dot{width:8px;height:8px;border-radius:50%;}
+</style>
 </head>
-
 <body>
-
 <div id="map"></div>
-<div id="hud">Connecting...</div>
+
+<!-- LEFT PANEL -->
+<div class="panel" id="hud">
+  <div id="hud-top">
+    <div>
+      <div class="sys-title">⬡ GOD'S EYE</div>
+      <div class="sys-sub">LIVE GLOBAL INTEL — V9</div>
+    </div>
+    <div id="status-row">
+      <span id="status-txt" style="font-size:9px;color:rgba(0,255,157,.5)">INIT</span>
+      <div class="dot" id="status-dot"></div>
+    </div>
+  </div>
+
+  <div id="search-wrap">
+    <input id="search" type="text" placeholder="Search headlines, locations, sources..." autocomplete="off">
+  </div>
+
+  <div id="src-filters">
+    <button class="src-btn" data-src="CNN"     style="border-color:#cc0000;background:#cc000022" onclick="toggleSrc('CNN')">CNN</button>
+    <button class="src-btn" data-src="FOX"     style="border-color:#003da5;background:#003da522" onclick="toggleSrc('FOX')">FOX NEWS</button>
+    <button class="src-btn" data-src="BBC"     style="border-color:#bb1919;background:#bb191922" onclick="toggleSrc('BBC')">BBC</button>
+    <button class="src-btn" data-src="ALJAZ"   style="border-color:#006d5b;background:#006d5b22" onclick="toggleSrc('ALJAZ')">AL JAZEERA</button>
+    <button class="src-btn" data-src="NBC"     style="border-color:#fa8c00;background:#fa8c0022" onclick="toggleSrc('NBC')">NBC</button>
+    <button class="src-btn" data-src="REUTERS" style="border-color:#ff6900;background:#ff690022" onclick="toggleSrc('REUTERS')">REUTERS</button>
+    <button class="src-btn" data-src="AP"      style="border-color:#aaa;background:#aaa2" onclick="toggleSrc('AP')">AP NEWS</button>
+    <button class="src-btn" data-src="X"       style="border-color:#4a9eff;background:#4a9eff22" onclick="toggleSrc('X')">𝕏 VERIFIED</button>
+  </div>
+
+  <div id="cat-filters">
+    <button class="cat-btn" data-cat="conflict"  onclick="toggleCat('conflict')">⚔️ Conflict</button>
+    <button class="cat-btn" data-cat="disaster"  onclick="toggleCat('disaster')">🌊 Disaster</button>
+    <button class="cat-btn" data-cat="politics"  onclick="toggleCat('politics')">🏛️ Politics</button>
+    <button class="cat-btn" data-cat="economy"   onclick="toggleCat('economy')">📈 Economy</button>
+    <button class="cat-btn" data-cat="military"  onclick="toggleCat('military')">🪖 Military</button>
+    <button class="cat-btn" data-cat="breaking"  onclick="toggleCat('breaking')">🔴 Breaking</button>
+  </div>
+
+  <div id="stats">
+    <div class="sb-item">Events: <span id="ct-events">0</span></div>
+    <div class="sb-item">Sources: <span id="ct-srcs">0</span></div>
+    <div class="sb-item">Locations: <span id="ct-locs">0</span></div>
+  </div>
+
+  <div id="event-list"><div id="empty">Fetching live feeds…</div></div>
+</div>
+
+<!-- RIGHT TICKER -->
+<div class="panel" id="ticker">
+  <div id="ticker-head">📡 RAW FEED</div>
+  <div id="ticker-list"></div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip"></div>
+
+<!-- BOTTOM STATUS -->
+<div id="statusbar">
+  <div class="sb-item">SYS: <span id="sb-sys">ONLINE</span></div>
+  <div class="sb-item">FEEDS: <span id="sb-feeds">–</span></div>
+  <div class="sb-item">REFRESH: <span id="sb-refresh">–</span></div>
+  <div id="clock">──</div>
+</div>
+
+<!-- LEGEND -->
+<div id="legend">
+  <div class="leg"><div class="leg-dot" style="background:#ff3b3b"></div>Conflict/Military</div>
+  <div class="leg"><div class="leg-dot" style="background:#ffc000"></div>Disaster/Crisis</div>
+  <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Politics/Economy</div>
+  <div class="leg"><div class="leg-dot" style="background:#00ff9d"></div>General News</div>
+</div>
 
 <script>
-const viewer = new Cesium.Viewer('map', { shouldAnimate: true });
+const RSS_PROXY = 'https://api.rss2json.com/v1/api.json?rss_url=';
+const SOURCES = [
+  { id:'CNN',     label:'CNN',        color:'#cc0000', url:'http://rss.cnn.com/rss/edition.rss' },
+  { id:'CNN',     label:'CNN World',  color:'#cc0000', url:'http://rss.cnn.com/rss/edition_world.rss' },
+  { id:'FOX',     label:'Fox News',   color:'#003da5', url:'https://moxie.foxnews.com/google-publisher/world.xml' },
+  { id:'BBC',     label:'BBC World',  color:'#bb1919', url:'http://feeds.bbci.co.uk/news/world/rss.xml' },
+  { id:'ALJAZ',   label:'Al Jazeera', color:'#006d5b', url:'https://www.aljazeera.com/xml/rss/all.xml' },
+  { id:'NBC',     label:'NBC News',   color:'#fa8c00', url:'https://feeds.nbcnews.com/nbcnews/public/world' },
+  { id:'REUTERS', label:'Reuters',    color:'#ff6900', url:'https://feeds.reuters.com/reuters/worldNews' },
+  { id:'AP',      label:'AP News',    color:'#999999', url:'https://rsshub.app/apnews/topics/ap-top-news' },
+  { id:'X',       label:'BBC (𝕏 mirror)', color:'#4a9eff', url:'https://rsshub.app/twitter/user/BBCBreaking' },
+  { id:'X',       label:'Reuters (𝕏)',    color:'#4a9eff', url:'https://rsshub.app/twitter/user/Reuters' },
+];
 
-// CONNECT TO RENDER BACKEND
-window.socket = new WebSocket("wss://godseye-osint-dashboard.onrender.com");
-
-let entities = [];
-
-socket.onopen = () => {
-  document.getElementById("hud").innerHTML = "Connected to backend...";
+const GEO = {
+  'ukraine':[48.38,31.17],'russia':[55.75,37.62],'moscow':[55.75,37.62],'kyiv':[50.45,30.52],
+  'gaza':[31.35,34.31],'israel':[31.05,34.86],'tel aviv':[32.06,34.78],'jerusalem':[31.78,35.22],
+  'iran':[35.69,51.39],'tehran':[35.69,51.39],'china':[39.91,116.39],'beijing':[39.91,116.39],
+  'taiwan':[25.03,121.56],'taipei':[25.03,121.56],'north korea':[39.03,125.75],'pyongyang':[39.03,125.75],
+  'south korea':[37.55,126.99],'seoul':[37.55,126.99],'japan':[35.68,139.69],'tokyo':[35.68,139.69],
+  'india':[28.61,77.21],'new delhi':[28.61,77.21],'pakistan':[33.72,73.06],'islamabad':[33.72,73.06],
+  'syria':[33.51,36.29],'damascus':[33.51,36.29],'iraq':[33.34,44.40],'baghdad':[33.34,44.40],
+  'afghanistan':[34.52,69.18],'kabul':[34.52,69.18],'saudi arabia':[24.69,46.72],'riyadh':[24.69,46.72],
+  'yemen':[15.35,44.21],'sanaa':[15.35,44.21],'libya':[32.90,13.18],'tripoli':[32.90,13.18],
+  'sudan':[15.55,32.53],'khartoum':[15.55,32.53],'ethiopia':[9.03,38.74],'addis ababa':[9.03,38.74],
+  'somalia':[2.05,45.34],'mogadishu':[2.05,45.34],'nigeria':[9.07,7.40],'abuja':[9.07,7.40],
+  'congo':[-4.32,15.32],'kinshasa':[-4.32,15.32],'south africa':[25.75,28.19],'pretoria':[25.75,28.19],
+  'egypt':[30.06,31.25],'cairo':[30.06,31.25],'turkey':[39.93,32.87],'ankara':[39.93,32.87],
+  'istanbul':[41.01,28.95],'greece':[37.98,23.73],'france':[48.85,2.35],'paris':[48.85,2.35],
+  'germany':[52.52,13.40],'berlin':[52.52,13.40],'uk':[51.51,-0.13],'london':[51.51,-0.13],
+  'united kingdom':[51.51,-0.13],'england':[51.51,-0.13],'spain':[40.42,-3.70],'madrid':[40.42,-3.70],
+  'italy':[41.90,12.50],'rome':[41.90,12.50],'poland':[52.23,21.01],'warsaw':[52.23,21.01],
+  'usa':[38.90,-77.04],'washington':[38.90,-77.04],'united states':[38.90,-77.04],'new york':[40.71,-74.01],
+  'los angeles':[34.05,-118.24],'chicago':[41.88,-87.63],'mexico':[19.43,-99.13],'mexico city':[19.43,-99.13],
+  'brazil':[-15.78,-47.93],'brasilia':[-15.78,-47.93],'venezuela':[10.49,-66.88],'caracas':[10.49,-66.88],
+  'colombia':[4.71,-74.07],'bogota':[4.71,-74.07],'peru':[-12.05,-77.04],'lima':[-12.05,-77.04],
+  'argentina':[-34.60,-58.38],'buenos aires':[-34.60,-58.38],'chile':[-33.46,-70.65],'santiago':[-33.46,-70.65],
+  'canada':[45.42,-75.70],'ottawa':[45.42,-75.70],'australia':[-35.28,149.13],'canberra':[-35.28,149.13],
+  'new zealand':[-41.28,174.78],'wellington':[-41.28,174.78],'indonesia':[-6.21,106.85],'jakarta':[-6.21,106.85],
+  'philippines':[14.60,120.98],'manila':[14.60,120.98],'vietnam':[21.02,105.83],'hanoi':[21.02,105.83],
+  'thailand':[13.75,100.52],'bangkok':[13.75,100.52],'myanmar':[16.80,96.16],'naypyidaw':[19.74,96.12],
+  'haiti':[18.54,-72.34],'port-au-prince':[18.54,-72.34],'cuba':[23.13,-82.38],'havana':[23.13,-82.38],
+  'taiwan strait':[24.00,119.5],
 };
 
-socket.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  render(data);
+const CATS = {
+  conflict: /war|attack|strike|bomb|missile|kill|shoot|troops|military|forces|battle|invasion|weapon|drone|airstrike|explosion|conflict|fighting|fighter|soldier|army|navy|combat|offensive|ceasefire/i,
+  disaster: /earthquake|flood|hurricane|typhoon|fire|tornado|tsunami|disaster|storm|volcano|eruption|drought|famine|refugee|evacuation|emergency|crisis|quake/i,
+  politics: /election|president|prime minister|government|parliament|senate|congress|vote|policy|diplomat|treaty|sanction|summit|nato|un |united nations|eu |european union|minister|secretary/i,
+  economy:  /economy|gdp|inflation|market|stock|oil|gas|trade|tariff|bank|currency|recession|growth|supply|demand|export|import|debt|budget|financial|rate/i,
+  military: /military|troops|army|navy|air force|defense|pentagon|nato|missile|nuclear|carrier|submarine|warship|fighter jet|special forces|intelligence|cia|nsa/i,
+  breaking: /breaking|urgent|alert|developing|just in|just now/i,
 };
+const CAT_ICONS = { conflict:'⚔️', disaster:'🌊', politics:'🏛️', economy:'📈', military:'🪖', breaking:'🔴', general:'📰' };
 
-socket.onerror = () => {
-  document.getElementById("hud").innerHTML = "WebSocket error";
-};
+let allEvents=[], entityMap={};
+let activeSrcs=new Set(SOURCES.map(s=>s.id));
+let activeCats=new Set(Object.keys(CATS).concat(['general']));
+let searchQ='', selectedId=null, feedCount=0;
 
-function render(data) {
-  entities.forEach(e => viewer.entities.remove(e));
-  entities = [];
+const viewer = new Cesium.Viewer('map', {
+  shouldAnimate:true, baseLayerPicker:false, navigationHelpButton:false,
+  homeButton:false, geocoder:false, sceneModePicker:false,
+  timeline:false, animation:false, fullscreenButton:false,
+  infoBox:false, selectionIndicator:false,
+});
+viewer.scene.backgroundColor = Cesium.Color.BLACK;
+try { viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#060e1a'); } catch(e){}
+viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(20,20,18000000), duration:0 });
 
-  data.clusters.forEach(c => {
-    const e = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(c.lon, c.lat),
-      ellipse: {
-        semiMajorAxis: c.score * 8000,
-        semiMinorAxis: c.score * 8000,
-        material: Cesium.Color.RED.withAlpha(0.4)
-      }
-    });
-    entities.push(e);
-  });
-
-  document.getElementById("hud").innerHTML =
-    "<b>ANOMALIES</b><br>" +
-    data.clusters
-      .sort((a,b)=>b.score-a.score)
-      .slice(0,10)
-      .map(c => ` Score: ${c.score.toFixed(1)}`)
-      .join("<br>");
+async function fetchAllFeeds() {
+  setStatus('fetching'); feedCount=0;
+  const results=[];
+  await Promise.allSettled(SOURCES.map(async src => {
+    try {
+      const res  = await fetch(`${RSS_PROXY}${encodeURIComponent(src.url)}&count=20`, { signal:AbortSignal.timeout(12000) });
+      const json = await res.json();
+      if (json.status==='ok' && json.items) { feedCount++; json.items.forEach(item => results.push(parseItem(item,src))); }
+    } catch(_) {}
+  }));
+  const seen=new Set();
+  allEvents = results.filter(e => { const k=e.headline.toLowerCase().slice(0,60); if(seen.has(k))return false; seen.add(k); return true; })
+                     .sort((a,b)=>b.ts-a.ts);
+  document.getElementById('sb-feeds').textContent = feedCount+'/'+SOURCES.length;
+  document.getElementById('sb-refresh').textContent = new Date().toLocaleTimeString();
+  setStatus('live'); renderMap(); renderList(); renderTicker(); updateStats();
 }
-</script>
 
+function parseItem(item,src) {
+  const text = ((item.title||'')+' '+(item.description||'')).replace(/<[^>]+>/g,'');
+  const headline = (item.title||'').replace(/<[^>]+>/g,'').trim();
+  const geo=detectGeo(text), cat=detectCat(text), sev=calcSeverity(text,cat);
+  const ts = item.pubDate ? new Date(item.pubDate).getTime() : Date.now();
+  return { id:Math.random().toString(36).slice(2), src:src.id, srcLabel:src.label, srcColor:src.color, headline, text, geo, cat, sev, ts, link:item.link||'' };
+}
+
+function detectGeo(text) {
+  const lower=text.toLowerCase();
+  for (const [name,coords] of Object.entries(GEO)) { if(lower.includes(name)) return {name,lat:coords[0],lon:coords[1]}; }
+  return null;
+}
+function detectCat(text) { for(const [cat,rx] of Object.entries(CATS)){if(rx.test(text))return cat;} return 'general'; }
+function calcSeverity(text,cat) {
+  let s=3;
+  if(cat==='conflict'||cat==='military')s+=3; if(cat==='disaster')s+=2; if(cat==='breaking')s+=2;
+  if(/kill|dead|death|massacre|nuclear/i.test(text))s+=2; if(/dozens|hundreds|thousands/i.test(text))s+=1;
+  return Math.min(s,10);
+}
+
+const SEV_COLORS={conflict:'#ff3b3b',military:'#ff3b3b',disaster:'#ffc000',breaking:'#ffc000',politics:'#00d4ff',economy:'#00d4ff',general:'#00ff9d'};
+
+function renderMap() {
+  Object.values(entityMap).forEach(e=>viewer.entities.remove(e)); entityMap={};
+  const geoGroups={};
+  getFiltered().forEach(ev => {
+    if(!ev.geo)return;
+    const key=`${Math.round(ev.geo.lat)},${Math.round(ev.geo.lon)}`;
+    if(!geoGroups[key])geoGroups[key]=[];
+    geoGroups[key].push(ev);
+  });
+  Object.entries(geoGroups).forEach(([key,evs]) => {
+    const lead=evs.sort((a,b)=>b.sev-a.sev)[0];
+    const col=SEV_COLORS[lead.cat]||'#00ff9d';
+    const cesCol=Cesium.Color.fromCssColorString(col);
+    const radius=60000+lead.sev*30000+(evs.length-1)*15000;
+    const selected=evs.some(e=>e.id===selectedId);
+    const ent=viewer.entities.add({
+      id:key, _evIds:evs.map(e=>e.id),
+      position:Cesium.Cartesian3.fromDegrees(lead.geo.lon,lead.geo.lat),
+      ellipse:{ semiMajorAxis:radius, semiMinorAxis:radius, material:cesCol.withAlpha(selected?.35:.18), outline:true, outlineColor:cesCol.withAlpha(selected?.9:.55), outlineWidth:selected?2:1, height:0 },
+      point:{ pixelSize:5+lead.sev*.8, color:cesCol, outlineColor:Cesium.Color.BLACK.withAlpha(.6), outlineWidth:1, disableDepthTestDistance:Number.POSITIVE_INFINITY },
+      label:{ text:`${CAT_ICONS[lead.cat]} ${lead.geo.name.toUpperCase()}\n${evs.length} event${evs.length>1?'s':''}`, font:'11px "Share Tech Mono"', fillColor:cesCol, outlineColor:Cesium.Color.BLACK, outlineWidth:2, style:Cesium.LabelStyle.FILL_AND_OUTLINE, pixelOffset:new Cesium.Cartesian2(0,-20), showBackground:true, backgroundColor:new Cesium.Color(.01,.04,.08,.85), backgroundPadding:new Cesium.Cartesian2(6,3), disableDepthTestDistance:Number.POSITIVE_INFINITY, show:selected||evs.length>=3||lead.sev>=7 },
+    });
+    entityMap[key]=ent;
+  });
+}
+
+function renderList() {
+  const filtered=getFiltered(), list=document.getElementById('event-list'), empty=document.getElementById('empty');
+  if(!filtered.length){ list.innerHTML=''; empty.style.display='block'; empty.textContent=allEvents.length?'No events match filters.':'Fetching live feeds…'; return; }
+  empty.style.display='none';
+  const maxSev=Math.max(...filtered.map(e=>e.sev),1);
+  list.innerHTML=filtered.slice(0,120).map(ev => {
+    const cls=ev.sev>=8?'threat':ev.sev>=6?'warn':'', age=timeAgo(ev.ts), pct=Math.round((ev.sev/maxSev)*100);
+    const icon=CAT_ICONS[ev.cat]||'📰', sel=ev.id===selectedId?'sel':'';
+    return `<div class="ev ${cls} ${sel}" onclick="selectEvent('${ev.id}')">
+      <span class="ico">${icon}</span>
+      <div class="body">
+        <div class="headline">${ev.headline}</div>
+        <div class="meta">
+          <span class="src-tag" style="background:${ev.srcColor}22;border:1px solid ${ev.srcColor}55;color:${ev.srcColor}">${ev.src}</span>
+          ${ev.geo?`<span class="loc">📍${ev.geo.name}</span>`:''}
+          <span class="age">${age}</span>
+        </div>
+      </div>
+      <div class="sev"><div class="sev-bar" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderTicker() {
+  document.getElementById('ticker-list').innerHTML=allEvents.slice(0,60).map(ev=>
+    `<div class="tick" onclick="selectEvent('${ev.id}')">
+      <div class="t-src" style="color:${ev.srcColor}">${ev.srcLabel}</div>
+      <div class="t-hl">${ev.headline}</div>
+      <div class="t-age">${timeAgo(ev.ts)}</div>
+    </div>`).join('');
+}
+
+function getFiltered() {
+  const q=searchQ.toLowerCase();
+  return allEvents.filter(ev => {
+    if(!activeSrcs.has(ev.src))return false;
+    if(!activeCats.has(ev.cat))return false;
+    if(q&&!ev.headline.toLowerCase().includes(q)&&!(ev.geo?.name||'').toLowerCase().includes(q)&&!ev.src.toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+
+function timeAgo(ts) {
+  const d=Date.now()-ts;
+  if(d<60000)return `${Math.round(d/1000)}s ago`;
+  if(d<3600000)return `${Math.round(d/60000)}m ago`;
+  if(d<86400000)return `${Math.round(d/3600000)}h ago`;
+  return `${Math.round(d/86400000)}d ago`;
+}
+
+function updateStats() {
+  const f=getFiltered();
+  document.getElementById('ct-events').textContent=f.length;
+  document.getElementById('ct-srcs').textContent=new Set(f.map(e=>e.src)).size;
+  document.getElementById('ct-locs').textContent=f.filter(e=>e.geo).length;
+}
+
+function setStatus(s) {
+  document.getElementById('status-dot').className='dot '+(s==='live'?'live':s==='fetching'?'warn':'err');
+  document.getElementById('status-txt').textContent=s.toUpperCase();
+}
+
+function selectEvent(id) {
+  const ev=allEvents.find(e=>e.id===id); if(!ev)return;
+  selectedId=id===selectedId?null:id;
+  if(selectedId&&ev.geo) viewer.camera.flyTo({ destination:Cesium.Cartesian3.fromDegrees(ev.geo.lon,ev.geo.lat,3000000), duration:1.5 });
+  if(selectedId&&ev.link) setTimeout(()=>{ if(confirm(`Open article?\n\n${ev.headline}\n\nSource: ${ev.srcLabel}`)) window.open(ev.link,'_blank'); },400);
+  renderMap(); renderList(); updateStats();
+}
+
+function toggleSrc(id) {
+  activeSrcs.has(id)?activeSrcs.delete(id):activeSrcs.add(id);
+  document.querySelectorAll('.src-btn').forEach(b=>b.classList.toggle('off',!activeSrcs.has(b.dataset.src)));
+  renderMap(); renderList(); updateStats();
+}
+
+function toggleCat(id) {
+  activeCats.has(id)?activeCats.delete(id):activeCats.add(id);
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.toggle('off',!activeCats.has(b.dataset.cat)));
+  renderMap(); renderList(); updateStats();
+}
+
+document.getElementById('search').addEventListener('input',e=>{ searchQ=e.target.value; renderList(); updateStats(); });
+
+const tip=document.getElementById('tooltip');
+viewer.screenSpaceEventHandler.setInputAction(click => {
+  const picked=viewer.scene.pick(click.position);
+  if(picked?.id?._evIds?.length){ const lead=allEvents.find(e=>e.id===picked.id._evIds[0]); if(lead)selectEvent(lead.id); }
+},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+viewer.screenSpaceEventHandler.setInputAction(move => {
+  const picked=viewer.scene.pick(move.endPosition);
+  if(picked?.id?._evIds) {
+    const evs=allEvents.filter(e=>picked.id._evIds.includes(e.id)).slice(0,4);
+    if(evs.length){
+      tip.innerHTML=`<strong>📍 ${evs[0].geo?.name?.toUpperCase()||'UNKNOWN'} — ${evs.length} events</strong>`+
+        evs.map(e=>`<span style="color:${e.srcColor}">[${e.src}]</span> ${e.headline.slice(0,60)}${e.headline.length>60?'…':''}`).join('<br>');
+      tip.style.display='block'; tip.style.left=(move.endPosition.x+14)+'px'; tip.style.top=(move.endPosition.y-14)+'px';
+    }
+  } else { tip.style.display='none'; }
+},Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+setInterval(()=>{ document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC'); },1000);
+document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');
+
+fetchAllFeeds();
+setInterval(fetchAllFeeds, 5*60*1000);
+</script>
 </body>
 </html>
-
