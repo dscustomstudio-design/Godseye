@@ -2,23 +2,31 @@
 <html>
 <head>
   <title>God’s Eye V7</title>
+
   <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
   <style>
-    html, body, #map { margin:0; height:100%; background:black; }
+    html, body, #map {
+      margin: 0;
+      height: 100%;
+      background: black;
+      overflow: hidden;
+    }
+
     #hud {
-      position:absolute;
-      top:10px;
-      left:10px;
-      color:#00ffcc;
-      font-family:monospace;
-      background:rgba(0,0,0,0.9);
-      padding:12px;
-      width:360px;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #00ffcc;
+      font-family: monospace;
+      background: rgba(0,0,0,0.9);
+      padding: 12px;
+      width: 360px;
     }
   </style>
 </head>
+
 <body>
 
 <div id="map"></div>
@@ -27,15 +35,22 @@
 <script>
 const viewer = new Cesium.Viewer('map', { shouldAnimate: true });
 
-const socket = new WebSocket("wss://godseye-osint-dashboard.onrender.com");
+// CONNECT TO RENDER BACKEND
+window.socket = new WebSocket("wss://godseye-osint-dashboard.onrender.com");
 
 let entities = [];
-let history = [];
+
+socket.onopen = () => {
+  document.getElementById("hud").innerHTML = "Connected to backend...";
+};
 
 socket.onmessage = (event) => {
   const data = JSON.parse(event.data);
-  history = data.timeline;
   render(data);
+};
+
+socket.onerror = () => {
+  document.getElementById("hud").innerHTML = "WebSocket error";
 };
 
 function render(data) {
@@ -59,7 +74,7 @@ function render(data) {
     data.clusters
       .sort((a,b)=>b.score-a.score)
       .slice(0,10)
-      .map(c => `⚡ ${c.score.toFixed(1)}`)
+      .map(c => `⚡ Score: ${c.score.toFixed(1)}`)
       .join("<br>");
 }
 </script>
