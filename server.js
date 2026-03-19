@@ -9,8 +9,10 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("God’s Eye backend is running.");
 });
-const server = app.listen(3000, () => {
-  console.log("God’s Eye V7 running");
+const PORT = process.env.PORT || 3000;
+
+const server = app.listen(PORT, () => {
+  console.log("God’s Eye V7 running on port " + PORT);
 });
 
 const wss = new WebSocket.Server({ server });
