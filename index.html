@@ -2,493 +2,604 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>God's Eye V9 — Live Intel</title>
+<title>God's Eye V10 — Live Intel</title>
 <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
-<link  href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 html,body,#map{height:100%;overflow:hidden;background:#000}
 
-/* ── FONTS ── */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600&display=swap');
-
 :root{
-  --green:#00ff9d;--cyan:#00d4ff;--red:#ff3b3b;--amber:#ffc000;
-  --panel:rgba(4,10,20,0.93);--border:rgba(0,200,255,0.18);
-  --source-cnn:#cc0000;--source-fox:#003366;--source-bbc:#bb1919;
-  --source-alj:#006d5b;--source-nbc:#fa8c00;--source-reuters:#ff6900;
-  --source-ap:#212121;--source-x:#1a1a2e;
+  --g:#00ff9d;--c:#00d4ff;--r:#ff3b3b;--a:#ffc000;--p:#b06fff;
+  --panel:rgba(3,8,18,0.94);--border:rgba(0,200,255,0.15);
 }
 
-/* ─── SCANLINE OVERLAY ─── */
 body::after{
   content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);
 }
 
-/* ─── PANELS ─── */
-.panel{
-  position:absolute;background:var(--panel);
-  border:1px solid var(--border);border-radius:4px;
-  font-family:'Share Tech Mono',monospace;color:var(--green);font-size:11px;
-}
+.panel{position:absolute;background:var(--panel);border:1px solid var(--border);border-radius:3px;font-family:'Share Tech Mono',monospace;color:var(--g);font-size:11px;}
 
-/* ─── LEFT HUD ─── */
-#hud{top:10px;left:10px;width:350px;max-height:calc(100vh - 20px);
-  display:flex;flex-direction:column;overflow:hidden;}
+#hud{top:10px;left:10px;width:360px;max-height:calc(100vh - 42px);display:flex;flex-direction:column;overflow:hidden;}
 
-#hud-top{
-  padding:10px 14px 8px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-}
-.sys-title{font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:600;
-  color:#fff;letter-spacing:3px;}
-.sys-sub{font-size:9px;color:var(--cyan);letter-spacing:1px;margin-top:1px;}
-
-#status-row{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+#hud-top{padding:9px 13px 7px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.sys-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#fff;letter-spacing:4px;}
+.sys-sub{font-size:9px;color:var(--c);letter-spacing:1px;margin-top:1px;}
 .dot{width:7px;height:7px;border-radius:50%;background:#333;transition:background .3s;}
-.dot.live{background:var(--green);animation:blink 1.4s infinite;}
-.dot.warn{background:var(--amber);}
-.dot.err {background:var(--red);}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.dot.live{background:var(--g);animation:blink 1.4s infinite;}
+.dot.fetching{background:var(--a);animation:blink .6s infinite;}
+.dot.err{background:var(--r);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* search */
-#search-wrap{padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
-#search{width:100%;background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.2);
-  border-radius:3px;color:var(--green);font-family:inherit;font-size:11px;
-  padding:5px 9px;outline:none;}
-#search:focus{border-color:rgba(0,255,157,.5);background:rgba(0,255,157,.1);}
-#search::placeholder{color:rgba(0,255,157,.3);}
+#search-wrap{padding:7px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:5px;}
+#search{flex:1;background:rgba(0,255,157,.05);border:1px solid rgba(0,255,157,.18);border-radius:3px;color:var(--g);font-family:inherit;font-size:11px;padding:5px 8px;outline:none;}
+#search:focus{border-color:rgba(0,255,157,.5);}
+#search::placeholder{color:rgba(0,255,157,.28);}
+#date-range{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.18);border-radius:3px;color:var(--c);font-family:inherit;font-size:10px;padding:4px 6px;outline:none;cursor:pointer;}
+#date-range option{background:#060e1a;}
+#search-btn{padding:5px 10px;border-radius:3px;border:1px solid rgba(0,255,157,.4);background:rgba(0,255,157,.08);color:var(--g);font-family:inherit;font-size:10px;cursor:pointer;letter-spacing:1px;transition:background .15s,border-color .15s;white-space:nowrap;flex-shrink:0;}
+#search-btn:hover{background:rgba(0,255,157,.18);border-color:rgba(0,255,157,.7);}
+#search-btn:active{background:rgba(0,255,157,.28);}
 
-/* source filters */
-#src-filters{
-  display:flex;flex-wrap:wrap;gap:4px;padding:7px 10px;
-  border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.src-btn{
-  padding:2px 7px;border-radius:2px;border:1px solid;cursor:pointer;
-  font-family:inherit;font-size:9px;letter-spacing:.5px;font-weight:600;
-  background:transparent;transition:opacity .15s,background .15s;opacity:1;
-  color:#fff;
-}
-.src-btn.off{opacity:.25;}
+#src-filters{display:flex;flex-wrap:wrap;gap:3px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.src-btn{padding:2px 6px;border-radius:2px;border:1px solid;cursor:pointer;font-family:inherit;font-size:9px;letter-spacing:.5px;font-weight:600;background:transparent;transition:opacity .15s;color:#fff;}
+.src-btn.off{opacity:.22;}
 
-/* category toggles */
-#cat-filters{
-  display:flex;flex-wrap:wrap;gap:4px;padding:5px 10px 7px;
-  border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.cat-btn{
-  display:flex;align-items:center;gap:3px;padding:2px 7px;
-  border-radius:2px;border:1px solid var(--border);cursor:pointer;
-  font-family:inherit;font-size:9px;background:transparent;
-  color:var(--cyan);transition:opacity .15s;
-}
-.cat-btn.off{opacity:.25;}
+#cat-filters{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.cat-btn{display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:2px;border:1px solid var(--border);cursor:pointer;font-family:inherit;font-size:9px;background:transparent;color:var(--c);transition:opacity .15s;}
+.cat-btn.off{opacity:.22;}
 
-/* stats bar */
-#stats{
-  display:flex;gap:12px;padding:5px 12px;border-bottom:1px solid var(--border);
-  font-size:10px;color:rgba(0,255,157,.5);flex-shrink:0;
-}
-#stats span{color:var(--green);}
+#stats{display:flex;gap:10px;padding:4px 12px;border-bottom:1px solid var(--border);font-size:9px;color:rgba(0,255,157,.4);flex-shrink:0;flex-wrap:wrap;}
+#stats span{color:var(--g);}
 
-/* event list */
 #event-list{overflow-y:auto;flex:1;}
-#event-list::-webkit-scrollbar{width:3px;}
+#event-list::-webkit-scrollbar{width:2px;}
 #event-list::-webkit-scrollbar-thumb{background:var(--border);}
 
-.ev{
-  display:flex;align-items:flex-start;gap:8px;padding:7px 12px;
-  cursor:pointer;border-left:2px solid transparent;
-  transition:background .1s,border-color .1s;
-}
-.ev:hover{background:rgba(0,255,157,.05);}
-.ev.sel{background:rgba(0,255,157,.08);border-left-color:var(--green);}
-.ev.threat{border-left-color:var(--red);}
-.ev.warn{border-left-color:var(--amber);}
-.ev .ico{font-size:15px;flex-shrink:0;margin-top:1px;}
+.ev{display:flex;align-items:flex-start;gap:7px;padding:6px 11px;cursor:pointer;border-left:2px solid transparent;transition:background .1s;}
+.ev:hover{background:rgba(0,255,157,.04);}
+.ev.sel{background:rgba(0,255,157,.07);border-left-color:var(--g);}
+.ev.threat{border-left-color:var(--r);}
+.ev.warn{border-left-color:var(--a);}
+.ev .ico{font-size:14px;flex-shrink:0;margin-top:1px;}
 .ev .body{flex:1;min-width:0;}
-.ev .headline{color:#ddd;font-size:10px;line-height:1.4;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.ev .meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
-.ev .src-tag{font-size:9px;padding:1px 5px;border-radius:2px;font-weight:600;color:#fff;}
-.ev .loc{font-size:9px;color:var(--cyan);}
-.ev .age{font-size:9px;color:rgba(0,255,157,.4);}
-.ev .sev{width:28px;flex-shrink:0;}
-.ev .sev-bar{height:3px;border-radius:1px;background:var(--green);margin-top:7px;}
-.ev.threat .sev-bar{background:var(--red);}
-.ev.warn  .sev-bar{background:var(--amber);}
+.ev .headline{color:#ddd;font-size:10px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.ev .meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap;}
+.ev .src-tag{font-size:8px;padding:1px 4px;border-radius:2px;font-weight:600;}
+.ev .loc{font-size:9px;color:var(--c);}
+.ev .age{font-size:9px;color:rgba(0,255,157,.35);}
+.ev .veh{font-size:10px;}
+.ev .sbar{width:24px;flex-shrink:0;}
+.ev .sbar-fill{height:3px;border-radius:1px;background:var(--g);margin-top:7px;}
+.ev.threat .sbar-fill{background:var(--r);}
+.ev.warn .sbar-fill{background:var(--a);}
 
-#empty{padding:20px 14px;color:rgba(0,255,157,.3);font-size:11px;}
+#empty{padding:18px 12px;color:rgba(0,255,157,.28);font-size:11px;}
+#loading-bar{height:2px;background:linear-gradient(90deg,transparent,var(--c),transparent);background-size:200% 100%;animation:sweep 1.2s linear infinite;display:none;}
+@keyframes sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-/* ─── RIGHT FEED TICKER ─── */
-#ticker{
-  top:10px;right:10px;width:280px;max-height:calc(100vh - 20px);
-  display:flex;flex-direction:column;overflow:hidden;
-}
-#ticker-head{padding:8px 12px;border-bottom:1px solid var(--border);
-  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
-  color:var(--amber);letter-spacing:2px;flex-shrink:0;}
+#ticker{top:10px;right:10px;width:270px;max-height:calc(100vh - 42px);display:flex;flex-direction:column;overflow:hidden;}
+#ticker-head{padding:7px 11px;border-bottom:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--a);letter-spacing:2px;flex-shrink:0;}
 #ticker-list{overflow-y:auto;flex:1;}
 #ticker-list::-webkit-scrollbar{width:2px;}
 #ticker-list::-webkit-scrollbar-thumb{background:var(--border);}
-.tick{padding:6px 10px;border-bottom:1px solid rgba(0,200,255,.06);cursor:pointer;}
-.tick:hover{background:rgba(0,200,255,.05);}
-.tick .t-src{font-size:9px;font-weight:600;margin-bottom:2px;}
-.tick .t-hl {font-size:10px;color:#bbb;line-height:1.3;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.tick .t-age{font-size:9px;color:rgba(0,255,157,.3);margin-top:2px;}
+.tick{padding:5px 9px;border-bottom:1px solid rgba(0,200,255,.05);cursor:pointer;}
+.tick:hover{background:rgba(0,200,255,.04);}
+.tick .t-src{font-size:8px;font-weight:600;margin-bottom:2px;}
+.tick .t-hl{font-size:9px;color:#bbb;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.tick .t-age{font-size:8px;color:rgba(0,255,157,.28);margin-top:2px;}
 
-/* ─── TOOLTIP ─── */
-#tooltip{
-  position:fixed;background:rgba(2,8,18,.97);border:1px solid var(--cyan);
-  border-radius:4px;padding:10px 13px;font-family:'Share Tech Mono',monospace;
-  font-size:10px;color:var(--cyan);pointer-events:none;display:none;
-  max-width:260px;line-height:1.8;z-index:9000;
-}
+#tooltip{position:fixed;background:rgba(2,7,16,.97);border:1px solid var(--c);border-radius:3px;padding:9px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--c);pointer-events:none;display:none;max-width:270px;line-height:1.8;z-index:9000;}
 #tooltip strong{color:#fff;font-size:11px;display:block;margin-bottom:4px;}
 
-/* ─── BOTTOM STATUS BAR ─── */
-#statusbar{
-  position:absolute;bottom:0;left:0;right:0;height:22px;
-  background:rgba(2,8,18,.9);border-top:1px solid var(--border);
-  display:flex;align-items:center;padding:0 14px;gap:20px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.4);
-}
-#statusbar .sb-item span{color:var(--green);}
-#clock{margin-left:auto;color:var(--amber);}
+#statusbar{position:absolute;bottom:0;left:0;right:0;height:22px;background:rgba(2,7,16,.92);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:16px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.35);}
+#statusbar .sb-item span{color:var(--g);}
+#clock{margin-left:auto;color:var(--a);}
 
-/* ─── LEGEND ─── */
-#legend{
-  position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
-  display:flex;gap:14px;align-items:center;padding:5px 14px;
-  background:rgba(4,10,20,.88);border:1px solid var(--border);border-radius:3px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.5);
-}
+#legend{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;padding:5px 12px;background:rgba(3,8,18,.9);border:1px solid var(--border);border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.45);white-space:nowrap;}
 .leg{display:flex;align-items:center;gap:4px;}
-.leg-dot{width:8px;height:8px;border-radius:50%;}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
 </style>
 </head>
 <body>
 <div id="map"></div>
+<div id="loading-bar"></div>
 
-<!-- LEFT PANEL -->
 <div class="panel" id="hud">
   <div id="hud-top">
     <div>
       <div class="sys-title">⬡ GOD'S EYE</div>
-      <div class="sys-sub">LIVE GLOBAL INTEL — V9</div>
+      <div class="sys-sub">LIVE GLOBAL INTEL — V10</div>
     </div>
-    <div id="status-row">
-      <span id="status-txt" style="font-size:9px;color:rgba(0,255,157,.5)">INIT</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span id="status-txt" style="font-size:9px;color:rgba(0,255,157,.4)">INIT</span>
       <div class="dot" id="status-dot"></div>
     </div>
   </div>
 
   <div id="search-wrap">
-    <input id="search" type="text" placeholder="Search headlines, locations, sources..." autocomplete="off">
+    <input id="search" type="text" placeholder="Search headlines, regions, sources…" autocomplete="off">
+    <button id="search-btn" onclick="runSearch()">⌕ RUN</button>
+    <select id="date-range">
+      <option value="1">24h</option>
+      <option value="3">3 days</option>
+      <option value="7">7 days</option>
+      <option value="14">14 days</option>
+      <option value="30" selected>30 days</option>
+    </select>
   </div>
 
   <div id="src-filters">
-    <button class="src-btn" data-src="CNN"     style="border-color:#cc0000;background:#cc000022" onclick="toggleSrc('CNN')">CNN</button>
-    <button class="src-btn" data-src="FOX"     style="border-color:#003da5;background:#003da522" onclick="toggleSrc('FOX')">FOX NEWS</button>
-    <button class="src-btn" data-src="BBC"     style="border-color:#bb1919;background:#bb191922" onclick="toggleSrc('BBC')">BBC</button>
-    <button class="src-btn" data-src="ALJAZ"   style="border-color:#006d5b;background:#006d5b22" onclick="toggleSrc('ALJAZ')">AL JAZEERA</button>
-    <button class="src-btn" data-src="NBC"     style="border-color:#fa8c00;background:#fa8c0022" onclick="toggleSrc('NBC')">NBC</button>
-    <button class="src-btn" data-src="REUTERS" style="border-color:#ff6900;background:#ff690022" onclick="toggleSrc('REUTERS')">REUTERS</button>
-    <button class="src-btn" data-src="AP"      style="border-color:#aaa;background:#aaa2" onclick="toggleSrc('AP')">AP NEWS</button>
-    <button class="src-btn" data-src="X"       style="border-color:#4a9eff;background:#4a9eff22" onclick="toggleSrc('X')">𝕏 VERIFIED</button>
+    <button class="src-btn" data-src="CNN"      style="border-color:#cc0000;background:#cc000018" onclick="toggleSrc('CNN')">CNN</button>
+    <button class="src-btn" data-src="FOX"      style="border-color:#2255bb;background:#2255bb18" onclick="toggleSrc('FOX')">FOX</button>
+    <button class="src-btn" data-src="BBC"      style="border-color:#bb1919;background:#bb191918" onclick="toggleSrc('BBC')">BBC</button>
+    <button class="src-btn" data-src="ALJAZ"    style="border-color:#009970;background:#00997018" onclick="toggleSrc('ALJAZ')">AL JAZ</button>
+    <button class="src-btn" data-src="NBC"      style="border-color:#fa8c00;background:#fa8c0018" onclick="toggleSrc('NBC')">NBC</button>
+    <button class="src-btn" data-src="REUTERS"  style="border-color:#ff6900;background:#ff690018" onclick="toggleSrc('REUTERS')">REUTERS</button>
+    <button class="src-btn" data-src="AP"       style="border-color:#aaa;background:#aaa1"        onclick="toggleSrc('AP')">AP</button>
+    <button class="src-btn" data-src="GUARDIAN" style="border-color:#005689;background:#00568918" onclick="toggleSrc('GUARDIAN')">GUARDIAN</button>
+    <button class="src-btn" data-src="X"        style="border-color:#4a9eff;background:#4a9eff18" onclick="toggleSrc('X')">𝕏</button>
   </div>
 
   <div id="cat-filters">
-    <button class="cat-btn" data-cat="conflict"  onclick="toggleCat('conflict')">⚔️ Conflict</button>
-    <button class="cat-btn" data-cat="disaster"  onclick="toggleCat('disaster')">🌊 Disaster</button>
-    <button class="cat-btn" data-cat="politics"  onclick="toggleCat('politics')">🏛️ Politics</button>
-    <button class="cat-btn" data-cat="economy"   onclick="toggleCat('economy')">📈 Economy</button>
-    <button class="cat-btn" data-cat="military"  onclick="toggleCat('military')">🪖 Military</button>
-    <button class="cat-btn" data-cat="breaking"  onclick="toggleCat('breaking')">🔴 Breaking</button>
+    <button class="cat-btn" data-cat="military" onclick="toggleCat('military')">🪖 Military</button>
+    <button class="cat-btn" data-cat="conflict" onclick="toggleCat('conflict')">⚔️ Conflict</button>
+    <button class="cat-btn" data-cat="naval"    onclick="toggleCat('naval')">🚢 Naval</button>
+    <button class="cat-btn" data-cat="aviation" onclick="toggleCat('aviation')">✈️ Aviation</button>
+    <button class="cat-btn" data-cat="disaster" onclick="toggleCat('disaster')">🌊 Disaster</button>
+    <button class="cat-btn" data-cat="politics" onclick="toggleCat('politics')">🏛️ Politics</button>
+    <button class="cat-btn" data-cat="economy"  onclick="toggleCat('economy')">📈 Economy</button>
+    <button class="cat-btn" data-cat="breaking" onclick="toggleCat('breaking')">🔴 Breaking</button>
   </div>
 
   <div id="stats">
-    <div class="sb-item">Events: <span id="ct-events">0</span></div>
+    <div class="sb-item">Stories: <span id="ct-events">0</span></div>
     <div class="sb-item">Sources: <span id="ct-srcs">0</span></div>
     <div class="sb-item">Locations: <span id="ct-locs">0</span></div>
+    <div class="sb-item">Vehicles: <span id="ct-vehs">0</span></div>
   </div>
 
-  <div id="event-list"><div id="empty">Fetching live feeds…</div></div>
+  <div id="event-list"><div id="empty">Initialising intel feeds…</div></div>
 </div>
 
-<!-- RIGHT TICKER -->
 <div class="panel" id="ticker">
   <div id="ticker-head">📡 RAW FEED</div>
   <div id="ticker-list"></div>
 </div>
 
-<!-- TOOLTIP -->
 <div id="tooltip"></div>
 
-<!-- BOTTOM STATUS -->
 <div id="statusbar">
   <div class="sb-item">SYS: <span id="sb-sys">ONLINE</span></div>
-  <div class="sb-item">FEEDS: <span id="sb-feeds">–</span></div>
-  <div class="sb-item">REFRESH: <span id="sb-refresh">–</span></div>
+  <div class="sb-item">API: <span id="sb-api">–</span></div>
+  <div class="sb-item">RSS: <span id="sb-rss">–</span></div>
+  <div class="sb-item">UPDATED: <span id="sb-ref">–</span></div>
   <div id="clock">──</div>
 </div>
 
-<!-- LEGEND -->
 <div id="legend">
   <div class="leg"><div class="leg-dot" style="background:#ff3b3b"></div>Conflict/Military</div>
   <div class="leg"><div class="leg-dot" style="background:#ffc000"></div>Disaster/Crisis</div>
   <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Politics/Economy</div>
-  <div class="leg"><div class="leg-dot" style="background:#00ff9d"></div>General News</div>
+  <div class="leg"><div class="leg-dot" style="background:#b06fff"></div>Naval/Aviation</div>
+  <div class="leg"><div class="leg-dot" style="background:#00ff9d"></div>General</div>
+  <span style="margin-left:6px;color:rgba(0,255,157,.3)">🚢✈️🚛🚁 = vehicle track</span>
 </div>
 
 <script>
-const RSS_PROXY = 'https://api.rss2json.com/v1/api.json?rss_url=';
-const SOURCES = [
-  { id:'CNN',     label:'CNN',        color:'#cc0000', url:'http://rss.cnn.com/rss/edition.rss' },
-  { id:'CNN',     label:'CNN World',  color:'#cc0000', url:'http://rss.cnn.com/rss/edition_world.rss' },
-  { id:'FOX',     label:'Fox News',   color:'#003da5', url:'https://moxie.foxnews.com/google-publisher/world.xml' },
+const NEWS_API_KEY = '9e3e9919e1c040e5ba90faeee0aeb7e2';
+const NEWS_API     = 'https://newsapi.org/v2/everything';
+const RSS_PROXY    = 'https://api.rss2json.com/v1/api.json?rss_url=';
+
+const API_QUERIES = [
+  { id:'CNN',      label:'CNN',          color:'#cc0000', domains:'cnn.com' },
+  { id:'FOX',      label:'Fox News',     color:'#2255bb', domains:'foxnews.com' },
+  { id:'BBC',      label:'BBC',          color:'#bb1919', domains:'bbc.co.uk,bbc.com' },
+  { id:'ALJAZ',    label:'Al Jazeera',   color:'#009970', domains:'aljazeera.com' },
+  { id:'NBC',      label:'NBC News',     color:'#fa8c00', domains:'nbcnews.com' },
+  { id:'REUTERS',  label:'Reuters',      color:'#ff6900', domains:'reuters.com' },
+  { id:'AP',       label:'AP News',      color:'#aaaaaa', domains:'apnews.com' },
+  { id:'GUARDIAN', label:'The Guardian', color:'#005689', domains:'theguardian.com' },
+];
+
+const RSS_FEEDS = [
   { id:'BBC',     label:'BBC World',  color:'#bb1919', url:'http://feeds.bbci.co.uk/news/world/rss.xml' },
-  { id:'ALJAZ',   label:'Al Jazeera', color:'#006d5b', url:'https://www.aljazeera.com/xml/rss/all.xml' },
-  { id:'NBC',     label:'NBC News',   color:'#fa8c00', url:'https://feeds.nbcnews.com/nbcnews/public/world' },
+  { id:'ALJAZ',   label:'Al Jazeera', color:'#009970', url:'https://www.aljazeera.com/xml/rss/all.xml' },
   { id:'REUTERS', label:'Reuters',    color:'#ff6900', url:'https://feeds.reuters.com/reuters/worldNews' },
-  { id:'AP',      label:'AP News',    color:'#999999', url:'https://rsshub.app/apnews/topics/ap-top-news' },
-  { id:'X',       label:'BBC (𝕏 mirror)', color:'#4a9eff', url:'https://rsshub.app/twitter/user/BBCBreaking' },
-  { id:'X',       label:'Reuters (𝕏)',    color:'#4a9eff', url:'https://rsshub.app/twitter/user/Reuters' },
+  { id:'X',       label:'BBC 𝕏',      color:'#4a9eff', url:'https://rsshub.app/twitter/user/BBCBreaking' },
+  { id:'X',       label:'Reuters 𝕏',  color:'#4a9eff', url:'https://rsshub.app/twitter/user/Reuters' },
+  { id:'X',       label:'AP 𝕏',       color:'#4a9eff', url:'https://rsshub.app/twitter/user/AP' },
 ];
 
 const GEO = {
   'ukraine':[48.38,31.17],'russia':[55.75,37.62],'moscow':[55.75,37.62],'kyiv':[50.45,30.52],
+  'kharkiv':[49.99,36.23],'zaporizhzhia':[47.84,35.14],'crimea':[44.95,34.10],
   'gaza':[31.35,34.31],'israel':[31.05,34.86],'tel aviv':[32.06,34.78],'jerusalem':[31.78,35.22],
-  'iran':[35.69,51.39],'tehran':[35.69,51.39],'china':[39.91,116.39],'beijing':[39.91,116.39],
-  'taiwan':[25.03,121.56],'taipei':[25.03,121.56],'north korea':[39.03,125.75],'pyongyang':[39.03,125.75],
-  'south korea':[37.55,126.99],'seoul':[37.55,126.99],'japan':[35.68,139.69],'tokyo':[35.68,139.69],
-  'india':[28.61,77.21],'new delhi':[28.61,77.21],'pakistan':[33.72,73.06],'islamabad':[33.72,73.06],
-  'syria':[33.51,36.29],'damascus':[33.51,36.29],'iraq':[33.34,44.40],'baghdad':[33.34,44.40],
-  'afghanistan':[34.52,69.18],'kabul':[34.52,69.18],'saudi arabia':[24.69,46.72],'riyadh':[24.69,46.72],
-  'yemen':[15.35,44.21],'sanaa':[15.35,44.21],'libya':[32.90,13.18],'tripoli':[32.90,13.18],
-  'sudan':[15.55,32.53],'khartoum':[15.55,32.53],'ethiopia':[9.03,38.74],'addis ababa':[9.03,38.74],
-  'somalia':[2.05,45.34],'mogadishu':[2.05,45.34],'nigeria':[9.07,7.40],'abuja':[9.07,7.40],
-  'congo':[-4.32,15.32],'kinshasa':[-4.32,15.32],'south africa':[25.75,28.19],'pretoria':[25.75,28.19],
-  'egypt':[30.06,31.25],'cairo':[30.06,31.25],'turkey':[39.93,32.87],'ankara':[39.93,32.87],
-  'istanbul':[41.01,28.95],'greece':[37.98,23.73],'france':[48.85,2.35],'paris':[48.85,2.35],
-  'germany':[52.52,13.40],'berlin':[52.52,13.40],'uk':[51.51,-0.13],'london':[51.51,-0.13],
-  'united kingdom':[51.51,-0.13],'england':[51.51,-0.13],'spain':[40.42,-3.70],'madrid':[40.42,-3.70],
-  'italy':[41.90,12.50],'rome':[41.90,12.50],'poland':[52.23,21.01],'warsaw':[52.23,21.01],
-  'usa':[38.90,-77.04],'washington':[38.90,-77.04],'united states':[38.90,-77.04],'new york':[40.71,-74.01],
-  'los angeles':[34.05,-118.24],'chicago':[41.88,-87.63],'mexico':[19.43,-99.13],'mexico city':[19.43,-99.13],
-  'brazil':[-15.78,-47.93],'brasilia':[-15.78,-47.93],'venezuela':[10.49,-66.88],'caracas':[10.49,-66.88],
-  'colombia':[4.71,-74.07],'bogota':[4.71,-74.07],'peru':[-12.05,-77.04],'lima':[-12.05,-77.04],
-  'argentina':[-34.60,-58.38],'buenos aires':[-34.60,-58.38],'chile':[-33.46,-70.65],'santiago':[-33.46,-70.65],
-  'canada':[45.42,-75.70],'ottawa':[45.42,-75.70],'australia':[-35.28,149.13],'canberra':[-35.28,149.13],
-  'new zealand':[-41.28,174.78],'wellington':[-41.28,174.78],'indonesia':[-6.21,106.85],'jakarta':[-6.21,106.85],
-  'philippines':[14.60,120.98],'manila':[14.60,120.98],'vietnam':[21.02,105.83],'hanoi':[21.02,105.83],
-  'thailand':[13.75,100.52],'bangkok':[13.75,100.52],'myanmar':[16.80,96.16],'naypyidaw':[19.74,96.12],
-  'haiti':[18.54,-72.34],'port-au-prince':[18.54,-72.34],'cuba':[23.13,-82.38],'havana':[23.13,-82.38],
-  'taiwan strait':[24.00,119.5],
+  'west bank':[31.90,35.20],'lebanon':[33.88,35.50],'beirut':[33.89,35.50],
+  'iran':[35.69,51.39],'tehran':[35.69,51.39],'isfahan':[32.66,51.68],
+  'china':[39.91,116.39],'beijing':[39.91,116.39],'shanghai':[31.23,121.47],'hong kong':[22.32,114.17],
+  'taiwan':[25.03,121.56],'taipei':[25.03,121.56],'taiwan strait':[24.00,119.50],
+  'south china sea':[15.00,114.00],'east china sea':[29.00,126.00],
+  'north korea':[39.03,125.75],'pyongyang':[39.03,125.75],
+  'south korea':[37.55,126.99],'seoul':[37.55,126.99],
+  'japan':[35.68,139.69],'tokyo':[35.68,139.69],'okinawa':[26.34,127.80],
+  'india':[28.61,77.21],'new delhi':[28.61,77.21],'mumbai':[19.08,72.88],
+  'pakistan':[33.72,73.06],'islamabad':[33.72,73.06],'karachi':[24.86,67.01],
+  'syria':[33.51,36.29],'damascus':[33.51,36.29],'aleppo':[36.20,37.16],
+  'iraq':[33.34,44.40],'baghdad':[33.34,44.40],'mosul':[36.34,43.13],
+  'afghanistan':[34.52,69.18],'kabul':[34.52,69.18],
+  'saudi arabia':[24.69,46.72],'riyadh':[24.69,46.72],'jeddah':[21.49,39.19],
+  'yemen':[15.35,44.21],'sanaa':[15.35,44.21],'aden':[12.78,45.04],
+  'oman':[23.61,58.59],'gulf of oman':[22.50,58.00],'strait of hormuz':[26.50,56.50],
+  'red sea':[20.00,38.00],'persian gulf':[27.00,51.00],
+  'libya':[32.90,13.18],'tripoli':[32.90,13.18],'benghazi':[32.12,20.07],
+  'sudan':[15.55,32.53],'khartoum':[15.55,32.53],
+  'ethiopia':[9.03,38.74],'addis ababa':[9.03,38.74],
+  'somalia':[2.05,45.34],'mogadishu':[2.05,45.34],'gulf of aden':[12.00,46.00],
+  'nigeria':[9.07,7.40],'abuja':[9.07,7.40],'lagos':[6.45,3.39],
+  'congo':[-4.32,15.32],'kinshasa':[-4.32,15.32],
+  'mali':[12.65,-8.00],'bamako':[12.65,-8.00],'sahel':[15.00,0.00],
+  'south africa':[-25.75,28.19],'pretoria':[-25.75,28.19],'cape town':[-33.92,18.42],
+  'egypt':[30.06,31.25],'cairo':[30.06,31.25],'suez canal':[30.50,32.35],
+  'turkey':[39.93,32.87],'ankara':[39.93,32.87],'istanbul':[41.01,28.95],
+  'greece':[37.98,23.73],'athens':[37.98,23.73],'aegean sea':[39.00,25.00],
+  'black sea':[43.00,34.00],'mediterranean':[35.00,18.00],
+  'france':[48.85,2.35],'paris':[48.85,2.35],
+  'germany':[52.52,13.40],'berlin':[52.52,13.40],
+  'uk':[51.51,-0.13],'london':[51.51,-0.13],'united kingdom':[51.51,-0.13],'england':[51.51,-0.13],
+  'scotland':[56.49,-4.20],'ireland':[53.33,-6.25],
+  'spain':[40.42,-3.70],'madrid':[40.42,-3.70],'barcelona':[41.39,2.17],
+  'italy':[41.90,12.50],'rome':[41.90,12.50],'milan':[45.46,9.19],
+  'poland':[52.23,21.01],'warsaw':[52.23,21.01],
+  'hungary':[47.50,19.04],'budapest':[47.50,19.04],
+  'finland':[60.17,24.94],'helsinki':[60.17,24.94],'sweden':[59.33,18.07],
+  'nato':[50.85,4.35],'brussels':[50.85,4.35],
+  'usa':[38.90,-77.04],'washington':[38.90,-77.04],'united states':[38.90,-77.04],
+  'new york':[40.71,-74.01],'los angeles':[34.05,-118.24],'chicago':[41.88,-87.63],
+  'florida':[27.99,-81.76],'texas':[31.00,-100.00],
+  'mexico':[19.43,-99.13],'mexico city':[19.43,-99.13],
+  'cuba':[23.13,-82.38],'havana':[23.13,-82.38],'caribbean':[17.00,-67.00],
+  'haiti':[18.54,-72.34],'venezuela':[10.49,-66.88],'caracas':[10.49,-66.88],
+  'colombia':[4.71,-74.07],'bogota':[4.71,-74.07],
+  'brazil':[-15.78,-47.93],'rio de janeiro':[-22.91,-43.17],
+  'argentina':[-34.60,-58.38],'buenos aires':[-34.60,-58.38],
+  'chile':[-33.46,-70.65],'peru':[-12.05,-77.04],
+  'canada':[45.42,-75.70],'ottawa':[45.42,-75.70],'toronto':[43.65,-79.38],
+  'arctic':[80.00,0.00],'north pole':[90.00,0.00],
+  'australia':[-35.28,149.13],'canberra':[-35.28,149.13],'sydney':[-33.87,151.21],
+  'new zealand':[-41.28,174.78],'pacific ocean':[0.00,-160.00],
+  'indonesia':[-6.21,106.85],'jakarta':[-6.21,106.85],
+  'philippines':[14.60,120.98],'manila':[14.60,120.98],
+  'vietnam':[21.02,105.83],'hanoi':[21.02,105.83],
+  'thailand':[13.75,100.52],'bangkok':[13.75,100.52],
+  'myanmar':[16.80,96.16],'singapore':[1.35,103.82],
+  'strait of malacca':[2.50,101.00],'indian ocean':[-20.00,80.00],
+  'atlantic ocean':[0.00,-30.00],'north atlantic':[45.00,-40.00],
 };
 
-const CATS = {
-  conflict: /war|attack|strike|bomb|missile|kill|shoot|troops|military|forces|battle|invasion|weapon|drone|airstrike|explosion|conflict|fighting|fighter|soldier|army|navy|combat|offensive|ceasefire/i,
-  disaster: /earthquake|flood|hurricane|typhoon|fire|tornado|tsunami|disaster|storm|volcano|eruption|drought|famine|refugee|evacuation|emergency|crisis|quake/i,
-  politics: /election|president|prime minister|government|parliament|senate|congress|vote|policy|diplomat|treaty|sanction|summit|nato|un |united nations|eu |european union|minister|secretary/i,
-  economy:  /economy|gdp|inflation|market|stock|oil|gas|trade|tariff|bank|currency|recession|growth|supply|demand|export|import|debt|budget|financial|rate/i,
-  military: /military|troops|army|navy|air force|defense|pentagon|nato|missile|nuclear|carrier|submarine|warship|fighter jet|special forces|intelligence|cia|nsa/i,
+const CAT_RX = {
+  naval:    /navy|naval|warship|destroyer|frigate|carrier|submarine|fleet|maritime|coast guard|vessel|ship|patrol boat|sea\b|strait|blockade|port/i,
+  aviation: /aircraft|fighter jet|drone|airstrike|air force|bomber|missile strike|helicopter|airspace|fly|flight|plane|f-16|f-35|b-52|mig|su-|intercept/i,
+  military: /military|troops|soldiers|army|battalion|brigade|regiment|offensive|ceasefire|frontline|special forces|pentagon|defense|nato|war games|exercise|deploy/i,
+  conflict: /war|attack|bomb|kill|shoot|forces|battle|invasion|weapon|explosion|conflict|fighting|combat|assault|casualt|dead|wound|siege|shelling|rocket/i,
+  disaster: /earthquake|flood|hurricane|typhoon|fire|tornado|tsunami|disaster|storm|volcano|eruption|drought|famine|refugee|evacuation|emergency|quake|wildfire|cyclone/i,
+  politics: /election|president|prime minister|government|parliament|senate|congress|vote|policy|diplomat|treaty|sanction|summit|un |united nations|eu |minister|secretary of state/i,
+  economy:  /economy|gdp|inflation|market|stock|oil|gas|trade|tariff|bank|currency|recession|growth|supply|export|import|debt|budget|financial|sanctions|rate/i,
   breaking: /breaking|urgent|alert|developing|just in|just now/i,
 };
-const CAT_ICONS = { conflict:'⚔️', disaster:'🌊', politics:'🏛️', economy:'📈', military:'🪖', breaking:'🔴', general:'📰' };
 
-let allEvents=[], entityMap={};
-let activeSrcs=new Set(SOURCES.map(s=>s.id));
-let activeCats=new Set(Object.keys(CATS).concat(['general']));
-let searchQ='', selectedId=null, feedCount=0;
+const CAT_ICONS = {
+  naval:'🚢', aviation:'✈️', military:'🪖', conflict:'⚔️',
+  disaster:'🌊', politics:'🏛️', economy:'📈', breaking:'🔴', general:'📰'
+};
 
-const viewer = new Cesium.Viewer('map', {
-  shouldAnimate:true, baseLayerPicker:false, navigationHelpButton:false,
-  homeButton:false, geocoder:false, sceneModePicker:false,
-  timeline:false, animation:false, fullscreenButton:false,
-  infoBox:false, selectionIndicator:false,
-});
-viewer.scene.backgroundColor = Cesium.Color.BLACK;
-try { viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#060e1a'); } catch(e){}
-viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(20,20,18000000), duration:0 });
-
-async function fetchAllFeeds() {
-  setStatus('fetching'); feedCount=0;
-  const results=[];
-  await Promise.allSettled(SOURCES.map(async src => {
-    try {
-      const res  = await fetch(`${RSS_PROXY}${encodeURIComponent(src.url)}&count=20`, { signal:AbortSignal.timeout(12000) });
-      const json = await res.json();
-      if (json.status==='ok' && json.items) { feedCount++; json.items.forEach(item => results.push(parseItem(item,src))); }
-    } catch(_) {}
-  }));
-  const seen=new Set();
-  allEvents = results.filter(e => { const k=e.headline.toLowerCase().slice(0,60); if(seen.has(k))return false; seen.add(k); return true; })
-                     .sort((a,b)=>b.ts-a.ts);
-  document.getElementById('sb-feeds').textContent = feedCount+'/'+SOURCES.length;
-  document.getElementById('sb-refresh').textContent = new Date().toLocaleTimeString();
-  setStatus('live'); renderMap(); renderList(); renderTicker(); updateStats();
-}
-
-function parseItem(item,src) {
-  const text = ((item.title||'')+' '+(item.description||'')).replace(/<[^>]+>/g,'');
-  const headline = (item.title||'').replace(/<[^>]+>/g,'').trim();
-  const geo=detectGeo(text), cat=detectCat(text), sev=calcSeverity(text,cat);
-  const ts = item.pubDate ? new Date(item.pubDate).getTime() : Date.now();
-  return { id:Math.random().toString(36).slice(2), src:src.id, srcLabel:src.label, srcColor:src.color, headline, text, geo, cat, sev, ts, link:item.link||'' };
-}
-
-function detectGeo(text) {
-  const lower=text.toLowerCase();
-  for (const [name,coords] of Object.entries(GEO)) { if(lower.includes(name)) return {name,lat:coords[0],lon:coords[1]}; }
+function assignVehicle(cat, geoName) {
+  const coastal = /sea|ocean|strait|gulf|bay|port|coast|mediterranean|atlantic|pacific|caribbean|red sea|persian|hormuz|aden|malacca/i;
+  const isCoastal = coastal.test(geoName || '');
+  if (cat==='naval')    return {icon:'🚢',type:'ship',  label:'Naval Vessel',       color:'#00d4ff'};
+  if (cat==='aviation') return {icon:'✈️',type:'plane', label:'Aircraft',           color:'#b06fff'};
+  if (cat==='military' && isCoastal) return Math.random()>0.4
+    ? {icon:'🚢',type:'ship', label:'Warship',           color:'#ff3b3b'}
+    : {icon:'✈️',type:'plane',label:'Military Aircraft', color:'#ff3b3b'};
+  if (cat==='military') return Math.random()>0.5
+    ? {icon:'🚛',type:'ground',label:'Ground Forces',    color:'#ff3b3b'}
+    : {icon:'🪖',type:'ground',label:'Military Unit',    color:'#ffc000'};
+  if (cat==='conflict' && isCoastal) return {icon:'🚢',type:'ship',label:'Patrol Vessel',color:'#ff3b3b'};
+  if (cat==='conflict') return {icon:'🚛',type:'ground',label:'Armed Column',color:'#ff3b3b'};
+  if (cat==='disaster') return {icon:'🚁',type:'helo', label:'Relief Ops',  color:'#ffc000'};
   return null;
 }
-function detectCat(text) { for(const [cat,rx] of Object.entries(CATS)){if(rx.test(text))return cat;} return 'general'; }
-function calcSeverity(text,cat) {
+
+let allEvents=[], entityMap={}, vehicleEnts=[];
+let activeSrcs = new Set([...API_QUERIES.map(s=>s.id),...RSS_FEEDS.map(s=>s.id)]);
+let activeCats = new Set(Object.keys(CAT_RX).concat(['general']));
+let searchQ='', dayRange=30, selectedId=null;
+
+const viewer = new Cesium.Viewer('map',{
+  shouldAnimate:true,baseLayerPicker:false,navigationHelpButton:false,
+  homeButton:false,geocoder:false,sceneModePicker:false,
+  timeline:false,animation:false,fullscreenButton:false,
+  infoBox:false,selectionIndicator:false,
+});
+viewer.scene.backgroundColor = Cesium.Color.BLACK;
+try{viewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#04091a');}catch(e){}
+viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(20,15,18500000),duration:0});
+
+function isoFrom(d){const x=new Date();x.setDate(x.getDate()-d);return x.toISOString().split('T')[0];}
+
+async function fetchNewsAPI(){
+  const from=isoFrom(dayRange), results=[];
+  const allDomains=API_QUERIES.map(q=>q.domains).join(',');
+  const keywords=['war military conflict','disaster earthquake flood','politics election government','navy ship maritime','aircraft missile strike'];
+  let apiOk=0;
+  await Promise.allSettled(keywords.map(async kw=>{
+    try{
+      const url=`${NEWS_API}?q=${encodeURIComponent(kw)}&domains=${encodeURIComponent(allDomains)}&from=${from}&sortBy=publishedAt&pageSize=100&language=en&apiKey=${NEWS_API_KEY}`;
+      const res=await fetch(url,{signal:AbortSignal.timeout(15000)});
+      const json=await res.json();
+      if(json.status==='ok'&&json.articles){
+        apiOk++;
+        json.articles.forEach(a=>{
+          const srcDomain=(a.source?.name||'').toLowerCase();
+          let srcMeta=API_QUERIES.find(q=>q.label.toLowerCase()===srcDomain)
+                   ||API_QUERIES.find(q=>q.domains.split(',').some(d=>srcDomain.includes(d.split('.')[0])));
+          if(!srcMeta)srcMeta={id:'AP',label:a.source?.name||'News',color:'#aaa'};
+          results.push(parseNewsAPI(a,srcMeta));
+        });
+      }
+    }catch(_){}
+  }));
+  document.getElementById('sb-api').textContent=apiOk>0?`OK (${results.length})`:'ERR';
+  return results;
+}
+
+function parseNewsAPI(a,src){
+  const text=((a.title||'')+' '+(a.description||'')+' '+(a.content||'')).replace(/<[^>]+>/g,'');
+  const headline=(a.title||'').trim();
+  const geo=detectGeo(text),cat=detectCat(text),sev=calcSev(text,cat);
+  const ts=a.publishedAt?new Date(a.publishedAt).getTime():Date.now();
+  const veh=geo?assignVehicle(cat,geo.name):null;
+  return{id:uid(),src:src.id,srcLabel:src.label,srcColor:src.color,headline,text,geo,cat,sev,ts,link:a.url||'',veh};
+}
+
+async function fetchRSS(){
+  const results=[];let rssOk=0;
+  await Promise.allSettled(RSS_FEEDS.map(async src=>{
+    try{
+      const res=await fetch(`${RSS_PROXY}${encodeURIComponent(src.url)}&count=30`,{signal:AbortSignal.timeout(12000)});
+      const json=await res.json();
+      if(json.status==='ok'&&json.items){rssOk++;json.items.forEach(item=>results.push(parseRSS(item,src)));}
+    }catch(_){}
+  }));
+  document.getElementById('sb-rss').textContent=`${rssOk}/${RSS_FEEDS.length}`;
+  return results;
+}
+
+function parseRSS(item,src){
+  const text=((item.title||'')+' '+(item.description||'')).replace(/<[^>]+>/g,'');
+  const headline=(item.title||'').replace(/<[^>]+>/g,'').trim();
+  const geo=detectGeo(text),cat=detectCat(text),sev=calcSev(text,cat);
+  const ts=item.pubDate?new Date(item.pubDate).getTime():Date.now();
+  const veh=geo?assignVehicle(cat,geo.name):null;
+  return{id:uid(),src:src.id,srcLabel:src.label,srcColor:src.color,headline,text,geo,cat,sev,ts,link:item.link||'',veh};
+}
+
+function detectGeo(text){
+  const lower=text.toLowerCase();
+  const sorted=Object.entries(GEO).sort((a,b)=>b[0].length-a[0].length);
+  for(const[name,coords]of sorted){if(lower.includes(name))return{name,lat:coords[0],lon:coords[1]};}
+  return null;
+}
+function detectCat(text){for(const[cat,rx]of Object.entries(CAT_RX)){if(rx.test(text))return cat;}return'general';}
+function calcSev(text,cat){
   let s=3;
-  if(cat==='conflict'||cat==='military')s+=3; if(cat==='disaster')s+=2; if(cat==='breaking')s+=2;
-  if(/kill|dead|death|massacre|nuclear/i.test(text))s+=2; if(/dozens|hundreds|thousands/i.test(text))s+=1;
+  if(cat==='conflict'||cat==='military')s+=3;
+  if(cat==='naval'||cat==='aviation')s+=2;
+  if(cat==='disaster')s+=2;if(cat==='breaking')s+=2;
+  if(/kill|dead|death|casualt|massacre|nuclear/i.test(text))s+=2;
+  if(/hundreds|thousands|dozens/i.test(text))s+=1;
   return Math.min(s,10);
 }
 
-const SEV_COLORS={conflict:'#ff3b3b',military:'#ff3b3b',disaster:'#ffc000',breaking:'#ffc000',politics:'#00d4ff',economy:'#00d4ff',general:'#00ff9d'};
+async function fetchAll(){
+  setStatus('fetching');
+  document.getElementById('loading-bar').style.display='block';
+  const[apiRes,rssRes]=await Promise.allSettled([fetchNewsAPI(),fetchRSS()]);
+  const combined=[
+    ...(apiRes.status==='fulfilled'?apiRes.value:[]),
+    ...(rssRes.status==='fulfilled'?rssRes.value:[]),
+  ];
+  const seen=new Set();
+  allEvents=combined.filter(e=>{const k=e.headline.toLowerCase().slice(0,55);if(seen.has(k))return false;seen.add(k);return true;})
+                    .sort((a,b)=>b.ts-a.ts);
+  document.getElementById('sb-ref').textContent=new Date().toLocaleTimeString();
+  document.getElementById('loading-bar').style.display='none';
+  setStatus('live');
+  renderMap();renderList();renderTicker();updateStats();
+}
 
-function renderMap() {
-  Object.values(entityMap).forEach(e=>viewer.entities.remove(e)); entityMap={};
-  const geoGroups={};
-  getFiltered().forEach(ev => {
+const SEV_COLOR={naval:'#b06fff',aviation:'#b06fff',military:'#ff3b3b',conflict:'#ff3b3b',disaster:'#ffc000',breaking:'#ffc000',politics:'#00d4ff',economy:'#00d4ff',general:'#00ff9d'};
+
+function renderMap(){
+  Object.values(entityMap).forEach(e=>viewer.entities.remove(e));entityMap={};
+  vehicleEnts.forEach(e=>viewer.entities.remove(e));vehicleEnts=[];
+  const visible=getFiltered();
+  const groups={};
+  visible.forEach(ev=>{
     if(!ev.geo)return;
-    const key=`${Math.round(ev.geo.lat)},${Math.round(ev.geo.lon)}`;
-    if(!geoGroups[key])geoGroups[key]=[];
-    geoGroups[key].push(ev);
+    const key=`${Math.round(ev.geo.lat*2)/2},${Math.round(ev.geo.lon*2)/2}`;
+    if(!groups[key])groups[key]=[];groups[key].push(ev);
   });
-  Object.entries(geoGroups).forEach(([key,evs]) => {
+  Object.entries(groups).forEach(([key,evs])=>{
     const lead=evs.sort((a,b)=>b.sev-a.sev)[0];
-    const col=SEV_COLORS[lead.cat]||'#00ff9d';
-    const cesCol=Cesium.Color.fromCssColorString(col);
-    const radius=60000+lead.sev*30000+(evs.length-1)*15000;
-    const selected=evs.some(e=>e.id===selectedId);
+    const col=SEV_COLOR[lead.cat]||'#00ff9d';
+    const cc=Cesium.Color.fromCssColorString(col);
+    const r=55000+lead.sev*28000+(evs.length-1)*12000;
+    const sel=evs.some(e=>e.id===selectedId);
     const ent=viewer.entities.add({
-      id:key, _evIds:evs.map(e=>e.id),
+      id:key,_evIds:evs.map(e=>e.id),
       position:Cesium.Cartesian3.fromDegrees(lead.geo.lon,lead.geo.lat),
-      ellipse:{ semiMajorAxis:radius, semiMinorAxis:radius, material:cesCol.withAlpha(selected?.35:.18), outline:true, outlineColor:cesCol.withAlpha(selected?.9:.55), outlineWidth:selected?2:1, height:0 },
-      point:{ pixelSize:5+lead.sev*.8, color:cesCol, outlineColor:Cesium.Color.BLACK.withAlpha(.6), outlineWidth:1, disableDepthTestDistance:Number.POSITIVE_INFINITY },
-      label:{ text:`${CAT_ICONS[lead.cat]} ${lead.geo.name.toUpperCase()}\n${evs.length} event${evs.length>1?'s':''}`, font:'11px "Share Tech Mono"', fillColor:cesCol, outlineColor:Cesium.Color.BLACK, outlineWidth:2, style:Cesium.LabelStyle.FILL_AND_OUTLINE, pixelOffset:new Cesium.Cartesian2(0,-20), showBackground:true, backgroundColor:new Cesium.Color(.01,.04,.08,.85), backgroundPadding:new Cesium.Cartesian2(6,3), disableDepthTestDistance:Number.POSITIVE_INFINITY, show:selected||evs.length>=3||lead.sev>=7 },
+      ellipse:{semiMajorAxis:r,semiMinorAxis:r,material:cc.withAlpha(sel?.32:.14),outline:true,outlineColor:cc.withAlpha(sel?.95:.5),outlineWidth:sel?2:1,height:0},
+      point:{pixelSize:4+lead.sev*.7,color:cc,outlineColor:Cesium.Color.BLACK.withAlpha(.6),outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY},
+      label:{text:`${CAT_ICONS[lead.cat]||'📰'} ${lead.geo.name.toUpperCase()}\n${evs.length} stor${evs.length>1?'ies':'y'}`,font:'10px "Share Tech Mono"',fillColor:cc,outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-22),showBackground:true,backgroundColor:new Cesium.Color(.01,.03,.08,.88),backgroundPadding:new Cesium.Cartesian2(5,3),disableDepthTestDistance:Number.POSITIVE_INFINITY,show:sel||evs.length>=2||lead.sev>=7},
     });
     entityMap[key]=ent;
   });
+  visible.filter(e=>e.geo&&e.veh).sort((a,b)=>b.sev-a.sev).slice(0,60).forEach(ev=>{
+    const v=ev.veh;
+    const alt=v.type==='plane'?9000:v.type==='helo'?500:0;
+    const jLat=ev.geo.lat+(Math.random()-.5)*1.5;
+    const jLon=ev.geo.lon+(Math.random()-.5)*1.5;
+    const ent=viewer.entities.add({
+      id:'veh_'+ev.id,_evId:ev.id,_isVehicle:true,
+      position:Cesium.Cartesian3.fromDegrees(jLon,jLat,alt),
+      billboard:{image:makeVehicleCanvas(v.icon,v.color,ev.id===selectedId),width:34,height:34,verticalOrigin:Cesium.VerticalOrigin.BOTTOM,disableDepthTestDistance:Number.POSITIVE_INFINITY,heightReference:v.type==='plane'?Cesium.HeightReference.NONE:Cesium.HeightReference.CLAMP_TO_GROUND},
+      label:{text:v.label,font:'9px "Share Tech Mono"',fillColor:Cesium.Color.fromCssColorString(v.color),outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-36),showBackground:true,backgroundColor:new Cesium.Color(.01,.03,.08,.85),backgroundPadding:new Cesium.Cartesian2(4,2),disableDepthTestDistance:Number.POSITIVE_INFINITY,show:ev.id===selectedId},
+    });
+    vehicleEnts.push(ent);
+  });
+  document.getElementById('ct-vehs').textContent=vehicleEnts.length;
 }
 
-function renderList() {
-  const filtered=getFiltered(), list=document.getElementById('event-list'), empty=document.getElementById('empty');
-  if(!filtered.length){ list.innerHTML=''; empty.style.display='block'; empty.textContent=allEvents.length?'No events match filters.':'Fetching live feeds…'; return; }
+function makeVehicleCanvas(icon,color,selected){
+  const s=34,c=document.createElement('canvas');
+  c.width=s;c.height=s;
+  const ctx=c.getContext('2d');
+  ctx.beginPath();ctx.arc(s/2,s/2,s/2-1,0,Math.PI*2);
+  ctx.fillStyle=selected?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.6)';ctx.fill();
+  ctx.strokeStyle=color;ctx.lineWidth=selected?2.5:1.5;ctx.stroke();
+  ctx.font=`${s*.48}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(icon,s/2,s/2+1);return c;
+}
+
+function renderList(){
+  const filtered=getFiltered(),list=document.getElementById('event-list'),empty=document.getElementById('empty');
+  if(!filtered.length){list.innerHTML='';empty.style.display='block';empty.textContent=allEvents.length?'No events match filters.':'Fetching intel…';return;}
   empty.style.display='none';
   const maxSev=Math.max(...filtered.map(e=>e.sev),1);
-  list.innerHTML=filtered.slice(0,120).map(ev => {
-    const cls=ev.sev>=8?'threat':ev.sev>=6?'warn':'', age=timeAgo(ev.ts), pct=Math.round((ev.sev/maxSev)*100);
-    const icon=CAT_ICONS[ev.cat]||'📰', sel=ev.id===selectedId?'sel':'';
-    return `<div class="ev ${cls} ${sel}" onclick="selectEvent('${ev.id}')">
+  list.innerHTML=filtered.slice(0,150).map(ev=>{
+    const cls=ev.sev>=8?'threat':ev.sev>=6?'warn':'';
+    const pct=Math.round((ev.sev/maxSev)*100);
+    const icon=CAT_ICONS[ev.cat]||'📰';
+    const sel=ev.id===selectedId?'sel':'';
+    const date=new Date(ev.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const vStr=ev.veh?`<span class="veh" title="${ev.veh.label}">${ev.veh.icon}</span>`:'';
+    return`<div class="ev ${cls} ${sel}" onclick="selectEvent('${ev.id}')">
       <span class="ico">${icon}</span>
       <div class="body">
-        <div class="headline">${ev.headline}</div>
+        <div class="headline">${esc(ev.headline)}</div>
         <div class="meta">
-          <span class="src-tag" style="background:${ev.srcColor}22;border:1px solid ${ev.srcColor}55;color:${ev.srcColor}">${ev.src}</span>
+          <span class="src-tag" style="background:${ev.srcColor}20;border:1px solid ${ev.srcColor}44;color:${ev.srcColor}">${ev.src}</span>
           ${ev.geo?`<span class="loc">📍${ev.geo.name}</span>`:''}
-          <span class="age">${age}</span>
+          ${vStr}
+          <span class="age">${date}</span>
         </div>
       </div>
-      <div class="sev"><div class="sev-bar" style="width:${pct}%"></div></div>
+      <div class="sbar"><div class="sbar-fill" style="width:${pct}%"></div></div>
     </div>`;
   }).join('');
 }
 
-function renderTicker() {
-  document.getElementById('ticker-list').innerHTML=allEvents.slice(0,60).map(ev=>
+function renderTicker(){
+  document.getElementById('ticker-list').innerHTML=allEvents.slice(0,80).map(ev=>
     `<div class="tick" onclick="selectEvent('${ev.id}')">
-      <div class="t-src" style="color:${ev.srcColor}">${ev.srcLabel}</div>
-      <div class="t-hl">${ev.headline}</div>
-      <div class="t-age">${timeAgo(ev.ts)}</div>
+      <div class="t-src" style="color:${ev.srcColor}">${ev.srcLabel} ${ev.veh?ev.veh.icon:''}</div>
+      <div class="t-hl">${esc(ev.headline)}</div>
+      <div class="t-age">${new Date(ev.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
     </div>`).join('');
 }
 
-function getFiltered() {
+function getFiltered(){
   const q=searchQ.toLowerCase();
-  return allEvents.filter(ev => {
+  const cut=Date.now()-dayRange*86400000;
+  return allEvents.filter(ev=>{
+    if(ev.ts<cut)return false;
     if(!activeSrcs.has(ev.src))return false;
     if(!activeCats.has(ev.cat))return false;
-    if(q&&!ev.headline.toLowerCase().includes(q)&&!(ev.geo?.name||'').toLowerCase().includes(q)&&!ev.src.toLowerCase().includes(q))return false;
+    if(q&&!ev.headline.toLowerCase().includes(q)&&!(ev.geo?.name||'').toLowerCase().includes(q)&&!ev.srcLabel.toLowerCase().includes(q)&&!ev.cat.toLowerCase().includes(q))return false;
     return true;
   });
 }
 
-function timeAgo(ts) {
-  const d=Date.now()-ts;
-  if(d<60000)return `${Math.round(d/1000)}s ago`;
-  if(d<3600000)return `${Math.round(d/60000)}m ago`;
-  if(d<86400000)return `${Math.round(d/3600000)}h ago`;
-  return `${Math.round(d/86400000)}d ago`;
-}
-
-function updateStats() {
+function updateStats(){
   const f=getFiltered();
   document.getElementById('ct-events').textContent=f.length;
   document.getElementById('ct-srcs').textContent=new Set(f.map(e=>e.src)).size;
   document.getElementById('ct-locs').textContent=f.filter(e=>e.geo).length;
 }
 
-function setStatus(s) {
-  document.getElementById('status-dot').className='dot '+(s==='live'?'live':s==='fetching'?'warn':'err');
+function setStatus(s){
+  document.getElementById('status-dot').className='dot '+(s==='live'?'live':s==='fetching'?'fetching':'err');
   document.getElementById('status-txt').textContent=s.toUpperCase();
 }
 
-function selectEvent(id) {
-  const ev=allEvents.find(e=>e.id===id); if(!ev)return;
+function uid(){return Math.random().toString(36).slice(2,10);}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function selectEvent(id){
+  const ev=allEvents.find(e=>e.id===id);if(!ev)return;
   selectedId=id===selectedId?null:id;
-  if(selectedId&&ev.geo) viewer.camera.flyTo({ destination:Cesium.Cartesian3.fromDegrees(ev.geo.lon,ev.geo.lat,3000000), duration:1.5 });
-  if(selectedId&&ev.link) setTimeout(()=>{ if(confirm(`Open article?\n\n${ev.headline}\n\nSource: ${ev.srcLabel}`)) window.open(ev.link,'_blank'); },400);
-  renderMap(); renderList(); updateStats();
+  if(selectedId&&ev.geo){
+    viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(ev.geo.lon,ev.geo.lat,2800000),duration:1.6});
+    vehicleEnts.forEach(e=>{e.label.show=e._evId===id;});
+  }
+  if(selectedId&&ev.link){
+    setTimeout(()=>{if(confirm(`Open full article?\n\n${ev.headline}\n\nSource: ${ev.srcLabel}`))window.open(ev.link,'_blank');},500);
+  }
+  renderMap();renderList();updateStats();
 }
 
-function toggleSrc(id) {
+function toggleSrc(id){
   activeSrcs.has(id)?activeSrcs.delete(id):activeSrcs.add(id);
   document.querySelectorAll('.src-btn').forEach(b=>b.classList.toggle('off',!activeSrcs.has(b.dataset.src)));
-  renderMap(); renderList(); updateStats();
+  renderMap();renderList();updateStats();
 }
-
-function toggleCat(id) {
+function toggleCat(id){
   activeCats.has(id)?activeCats.delete(id):activeCats.add(id);
   document.querySelectorAll('.cat-btn').forEach(b=>b.classList.toggle('off',!activeCats.has(b.dataset.cat)));
-  renderMap(); renderList(); updateStats();
+  renderMap();renderList();updateStats();
 }
 
-document.getElementById('search').addEventListener('input',e=>{ searchQ=e.target.value; renderList(); updateStats(); });
+function runSearch(){
+  searchQ=document.getElementById('search').value;
+  renderMap();renderList();updateStats();
+  const btn=document.getElementById('search-btn');
+  btn.textContent='✓ DONE';
+  btn.style.borderColor='rgba(0,255,157,.9)';
+  btn.style.background='rgba(0,255,157,.22)';
+  setTimeout(()=>{btn.textContent='⌕ RUN';btn.style.borderColor='';btn.style.background='';},1200);
+}
+document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();});
+document.getElementById('date-range').addEventListener('change',e=>{dayRange=parseInt(e.target.value);renderMap();renderList();updateStats();});
 
 const tip=document.getElementById('tooltip');
-viewer.screenSpaceEventHandler.setInputAction(click => {
+viewer.screenSpaceEventHandler.setInputAction(click=>{
   const picked=viewer.scene.pick(click.position);
-  if(picked?.id?._evIds?.length){ const lead=allEvents.find(e=>e.id===picked.id._evIds[0]); if(lead)selectEvent(lead.id); }
+  if(picked?.id?._evId)selectEvent(picked.id._evId);
+  else if(picked?.id?._evIds?.length)selectEvent(allEvents.find(e=>e.id===picked.id._evIds[0])?.id);
 },Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-viewer.screenSpaceEventHandler.setInputAction(move => {
+viewer.screenSpaceEventHandler.setInputAction(move=>{
   const picked=viewer.scene.pick(move.endPosition);
-  if(picked?.id?._evIds) {
-    const evs=allEvents.filter(e=>picked.id._evIds.includes(e.id)).slice(0,4);
-    if(evs.length){
-      tip.innerHTML=`<strong>📍 ${evs[0].geo?.name?.toUpperCase()||'UNKNOWN'} — ${evs.length} events</strong>`+
-        evs.map(e=>`<span style="color:${e.srcColor}">[${e.src}]</span> ${e.headline.slice(0,60)}${e.headline.length>60?'…':''}`).join('<br>');
-      tip.style.display='block'; tip.style.left=(move.endPosition.x+14)+'px'; tip.style.top=(move.endPosition.y-14)+'px';
-    }
-  } else { tip.style.display='none'; }
+  let html=null;
+  if(picked?.id?._evId){
+    const ev=allEvents.find(e=>e.id===picked.id._evId);
+    if(ev)html=`<strong>${ev.veh?.icon||''} ${ev.veh?.label||'Track'}</strong><span style="color:${ev.srcColor}">[${ev.src}]</span> ${esc(ev.headline.slice(0,80))}${ev.headline.length>80?'…':''}${ev.geo?`<br>📍 ${ev.geo.name}`:''}`;
+  }else if(picked?.id?._evIds){
+    const evs=allEvents.filter(e=>picked.id._evIds.includes(e.id)).slice(0,5);
+    if(evs.length)html=`<strong>📍 ${evs[0].geo?.name?.toUpperCase()||''} — ${evs.length} stories</strong>`+evs.map(e=>`<span style="color:${e.srcColor}">[${e.src}]</span> ${esc(e.headline.slice(0,55))}…`).join('<br>');
+  }
+  if(html){tip.innerHTML=html;tip.style.display='block';tip.style.left=(move.endPosition.x+14)+'px';tip.style.top=(move.endPosition.y-14)+'px';}
+  else tip.style.display='none';
 },Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-setInterval(()=>{ document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC'); },1000);
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');},1000);
 document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');
 
-fetchAllFeeds();
-setInterval(fetchAllFeeds, 5*60*1000);
+fetchAll();
+setInterval(fetchAll,10*60*1000);
 </script>
 </body>
 </html>
