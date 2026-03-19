@@ -1,82 +1,369 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>God’s Eye V7</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>God’s Eye V7 • Live OSINT Globe</title>
 
+  <!-- Cesium -->
   <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
   <style>
-    html, body, #map {
+    html, body, #cesiumContainer {
       margin: 0;
+      padding: 0;
+      width: 100%;
       height: 100%;
-      background: black;
+      background: #000;
       overflow: hidden;
+      font-family: 'Courier New', monospace;
     }
 
-    #hud {
+    /* Top Bar */
+    #topbar {
       position: absolute;
       top: 10px;
-      left: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.85);
       color: #00ffcc;
-      font-family: monospace;
-      background: rgba(0,0,0,0.9);
+      padding: 8px 20px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      z-index: 1000;
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+      backdrop-filter: blur(10px);
+    }
+    #topbar span { font-size: 14px; }
+    #status { color: #00ffcc; font-weight: bold; }
+    #reconnectBtn {
+      background: #ff0044;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    #reconnectBtn:hover { background: #ff3366; }
+
+    /* Right Panel - Anomalies */
+    #anomaliesPanel {
+      position: absolute;
+      top: 70px;
+      right: 15px;
+      width: 320px;
+      background: rgba(0, 0, 0, 0.92);
+      color: #00ffcc;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 0 30px rgba(0, 255, 204, 0.4);
+      z-index: 1000;
+      max-height: 70vh;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+    #anomaliesPanel h2 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      border-bottom: 1px solid #00ffcc;
+      padding-bottom: 8px;
+    }
+    .anomaly-item {
+      background: rgba(255, 255, 255, 0.05);
+      margin-bottom: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .anomaly-item:hover {
+      background: rgba(255, 0, 68, 0.2);
+      transform: translateX(5px);
+    }
+    .score-high { color: #ff0044; }
+    .score-med { color: #ffaa00; }
+    .score-low { color: #00ff88; }
+
+    /* Legend */
+    #legend {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.85);
+      color: #ccc;
       padding: 12px;
-      width: 360px;
+      border-radius: 10px;
+      font-size: 13px;
+      z-index: 1000;
+      backdrop-filter: blur(8px);
+    }
+
+    /* Connection HUD (small overlay) */
+    #hud {
+      position: absolute;
+      top: 70px;
+      left: 15px;
+      background: rgba(0, 0, 0, 0.9);
+      color: #ffcc00;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 13px;
+      z-index: 1000;
+      display: none;
+    }
+
+    /* Help toggle */
+    #helpBtn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 255, 204, 0.2);
+      color: #00ffcc;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 18px;
+      z-index: 1000;
     }
   </style>
 </head>
-
 <body>
 
-<div id="map"></div>
-<div id="hud">Connecting...</div>
+<div id="cesiumContainer"></div>
+
+<!-- Top Bar -->
+<div id="topbar">
+  <span><strong>God’s Eye V7</strong> • Real-Time OSINT</span>
+  <span id="clock">—</span>
+  <span id="status">Connecting to backend...</span>
+  <button id="reconnectBtn">Reconnect</button>
+</div>
+
+<!-- Anomalies Panel -->
+<div id="anomaliesPanel">
+  <h2>⚡ ANOMALIES (<span id="count">0</span>)</h2>
+  <div id="anomaliesList">Waiting for data...</div>
+</div>
+
+<!-- Legend -->
+<div id="legend">
+  <strong>Cluster Score</strong><br>
+  <span style="color:#ff0044">● High</span> = Large red zone (hot)<br>
+  <span style="color:#ffaa00">● Medium</span><br>
+  <span style="color:#00ff88">● Low</span> = Small green zone
+</div>
+
+<!-- Quick Help -->
+<button id="helpBtn" title="Controls &amp; Help">?</button>
+
+<!-- Tiny status HUD -->
+<div id="hud"></div>
 
 <script>
-const viewer = new Cesium.Viewer('map', { shouldAnimate: true });
+  // ====================== CESIUM SETUP ======================
+  // ←←← REPLACE WITH YOUR OWN FREE TOKEN (https://cesium.com/ion/) ←←←
+  Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJ5b3VycyIsInNjb3BlcyI6WyJhc3NldHMiLCJ0aWxlcyIsInRlcnJhaW4iXSwiaWF0IjoxNzI5MDAwMDAwLCJleHAiOjE3MjkwMDAwMDB9.your-real-token-here';
 
-// CONNECT TO RENDER BACKEND
-window.socket = new WebSocket("wss://godseye-osint-dashboard.onrender.com");
-
-let entities = [];
-
-socket.onopen = () => {
-  document.getElementById("hud").innerHTML = "Connected to backend...";
-};
-
-socket.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  render(data);
-};
-
-socket.onerror = () => {
-  document.getElementById("hud").innerHTML = "WebSocket error";
-};
-
-function render(data) {
-  entities.forEach(e => viewer.entities.remove(e));
-  entities = [];
-
-  data.clusters.forEach(c => {
-    const e = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(c.lon, c.lat),
-      ellipse: {
-        semiMajorAxis: c.score * 8000,
-        semiMinorAxis: c.score * 8000,
-        material: Cesium.Color.RED.withAlpha(0.4)
-      }
-    });
-    entities.push(e);
+  const viewer = new Cesium.Viewer('cesiumContainer', {
+    shouldAnimate: true,
+    timeline: true,
+    animation: true,
+    baseLayerPicker: true,
+    geocoder: true,
+    homeButton: true,
+    sceneModePicker: true,
+    navigationHelpButton: true,
+    infoBox: true,
+    selectionIndicator: true,
+    terrainProvider: Cesium.createWorldTerrain(), // high-res terrain (needs token)
+    skyBox: false,
+    skyAtmosphere: true,
+    fullscreenButton: true,
+    creditContainer: document.createElement('div') // hide credits if you want
   });
 
-  document.getElementById("hud").innerHTML =
-    "<b>ANOMALIES</b><br>" +
-    data.clusters
-      .sort((a,b)=>b.score-a.score)
-      .slice(0,10)
-      .map(c => `⚡ Score: ${c.score.toFixed(1)}`)
-      .join("<br>");
-}
+  // Real-time clock setup (24h window centered on now)
+  const now = Cesium.JulianDate.now();
+  viewer.clock.startTime = Cesium.JulianDate.addHours(now, -12, new Cesium.JulianDate());
+  viewer.clock.stopTime  = Cesium.JulianDate.addHours(now, 12,  new Cesium.JulianDate());
+  viewer.clock.currentTime = now;
+  viewer.clock.multiplier = 1;
+  viewer.timeline.zoomTo(viewer.clock.startTime, viewer.clock.stopTime);
+
+  // Live clock display in top bar
+  function updateLiveClock() {
+    const julian = viewer.clock.currentTime;
+    const iso = Cesium.JulianDate.toIso8601(julian).slice(0, 19).replace('T', ' ');
+    document.getElementById('clock').textContent = iso + ' UTC';
+  }
+  viewer.clock.onTick.addEventListener(updateLiveClock);
+  updateLiveClock();
+
+  // ====================== WEBSOCKET WITH AUTO-RECONNECT ======================
+  let socket;
+  let reconnectAttempts = 0;
+  const MAX_RECONNECT = 8;
+
+  function connectWebSocket() {
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = 'Connecting...';
+    statusEl.style.color = '#ffcc00';
+
+    socket = new WebSocket('wss://godseye-osint-dashboard.onrender.com');
+
+    socket.onopen = () => {
+      statusEl.textContent = '● LIVE';
+      statusEl.style.color = '#00ff88';
+      reconnectAttempts = 0;
+      document.getElementById('hud').style.display = 'none';
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.clusters && Array.isArray(data.clusters)) {
+          renderAnomalies(data.clusters);
+        }
+      } catch (e) {
+        console.error('Invalid JSON from backend', e);
+      }
+    };
+
+    socket.onerror = () => {
+      statusEl.textContent = 'WebSocket error';
+      statusEl.style.color = '#ff0044';
+    };
+
+    socket.onclose = () => {
+      statusEl.textContent = 'Disconnected';
+      statusEl.style.color = '#ff0044';
+      if (reconnectAttempts < MAX_RECONNECT) {
+        reconnectAttempts++;
+        setTimeout(connectWebSocket, 3000);
+      }
+    };
+  }
+
+  // Reconnect button
+  document.getElementById('reconnectBtn').onclick = () => {
+    if (socket) socket.close();
+    reconnectAttempts = 0;
+    connectWebSocket();
+  };
+
+  // ====================== ANOMALY RENDERING (optimized) ======================
+  let currentEntities = [];
+
+  function getScoreColor(score) {
+    if (score >= 8) return Cesium.Color.RED.withAlpha(0.65);
+    if (score >= 5) return Cesium.Color.ORANGE.withAlpha(0.65);
+    return Cesium.Color.LIME.withAlpha(0.55);
+  }
+
+  function renderAnomalies(clusters) {
+    // Clear old entities
+    currentEntities.forEach(e => viewer.entities.remove(e));
+    currentEntities = [];
+
+    const listEl = document.getElementById('anomaliesList');
+    listEl.innerHTML = '';
+
+    if (clusters.length === 0) {
+      listEl.innerHTML = '<div style="color:#666; padding:10px;">No anomalies detected right now</div>';
+      document.getElementById('count').textContent = '0';
+      return;
+    }
+
+    // Sort by score (highest first)
+    clusters.sort((a, b) => b.score - a.score);
+
+    clusters.forEach((c, i) => {
+      const color = getScoreColor(c.score);
+      const size = Math.max(8000, c.score * 12000);
+
+      const entity = viewer.entities.add({
+        name: `Anomaly #${i + 1}`,
+        position: Cesium.Cartesian3.fromDegrees(c.lon, c.lat, 5000),
+        ellipse: {
+          semiMajorAxis: size,
+          semiMinorAxis: size,
+          material: color,
+          outline: true,
+          outlineColor: Cesium.Color.WHITE.withAlpha(0.6),
+          outlineWidth: 2,
+          height: 0,
+          extrudedHeight: size * 0.8
+        },
+        label: {
+          text: `${c.score.toFixed(1)}`,
+          font: 'bold 18px Arial',
+          fillColor: Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 4,
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -size / 30000)
+        },
+        description: `<h3>Score: ${c.score.toFixed(1)}</h3><p>Lat: ${c.lat.toFixed(4)}<br>Lon: ${c.lon.toFixed(4)}</p>`
+      });
+
+      currentEntities.push(entity);
+
+      // Clickable list item
+      const item = document.createElement('div');
+      item.className = 'anomaly-item';
+      item.innerHTML = `
+        <span style="font-size:18px">⚡</span>
+        <strong>Score: <span class="${c.score >= 8 ? 'score-high' : c.score >= 5 ? 'score-med' : 'score-low'}">${c.score.toFixed(1)}</span></strong><br>
+        <small>${c.lat.toFixed(4)}°N, ${c.lon.toFixed(4)}°E</small>
+      `;
+      item.onclick = () => {
+        viewer.flyTo(entity, {
+          duration: 1.8,
+          maximumHeight: 8000000
+        });
+      };
+      listEl.appendChild(item);
+    });
+
+    document.getElementById('count').textContent = clusters.length;
+  }
+
+  // ====================== HELP MODAL ======================
+  const helpBtn = document.getElementById('helpBtn');
+  helpBtn.onclick = () => {
+    alert(`God’s Eye V7 Controls:\n\n` +
+      `• Left click + drag = orbit\n` +
+      `• Right click + drag = pan\n` +
+      `• Scroll = zoom\n` +
+      `• Timeline at bottom = scrub time\n` +
+      `• Click anomalies in right panel to fly\n` +
+      `• Built-in layer picker (top-right) for imagery/terrain\n\n` +
+      `Backend not sending data? Check Render logs and WebSocket route.`);
+  };
+
+  // ====================== START EVERYTHING ======================
+  connectWebSocket();
+
+  // Optional: demo mode if no backend (uncomment for testing)
+  /*
+  setTimeout(() => {
+    renderAnomalies([
+      { lon: -74.0060, lat: 40.7128, score: 9.4 },
+      { lon: 139.6917, lat: 35.6895, score: 7.8 },
+      { lon: 2.3522,  lat: 48.8566, score: 8.2 }
+    ]);
+  }, 1500);
+  */
+
+  // Final UX polish
+  viewer.scene.globe.enableLighting = true;
+  viewer.scene.globe.showGroundAtmosphere = true;
 </script>
 
 </body>
