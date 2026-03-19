@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>God’s Eye V7</title>
+  <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+  <style>
+    html, body, #map { margin:0; height:100%; background:black; }
+    #hud {
+      position:absolute;
+      top:10px;
+      left:10px;
+      color:#00ffcc;
+      font-family:monospace;
+      background:rgba(0,0,0,0.9);
+      padding:12px;
+      width:360px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="hud">Connecting...</div>
+
+<script>
+const viewer = new Cesium.Viewer('map', { shouldAnimate: true });
+
+// IMPORTANT: replace this after deploying backend
+const socket = new WebSocket("ws://localhost:3000");
+
+let entities = [];
+let history = [];
+
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  history = data.timeline;
+  render(data);
+};
+
+function render(data) {
+  entities.forEach(e => viewer.entities.remove(e));
+  entities = [];
+
+  data.clusters.forEach(c => {
+    const e = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(c.lon, c.lat),
+      ellipse: {
+        semiMajorAxis: c.score * 8000,
+        semiMinorAxis: c.score * 8000,
+        material: Cesium.Color.RED.withAlpha(0.4)
+      }
+    });
+    entities.push(e);
+  });
+
+  document.getElementById("hud").innerHTML =
+    "<b>ANOMALIES</b><br>" +
+    data.clusters
+      .sort((a,b)=>b.score-a.score)
+      .slice(0,10)
+      .map(c => `⚡ ${c.score.toFixed(1)}`)
+      .join("<br>");
+}
+</script>
+
+</body>
+</html>
