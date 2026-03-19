@@ -6,7 +6,9 @@ const clustering = require("density-clustering");
 
 const app = express();
 app.use(cors());
-
+app.get("/", (req, res) => {
+  res.send("God’s Eye backend is running.");
+});
 const server = app.listen(3000, () => {
   console.log("God’s Eye V7 running");
 });
