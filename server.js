@@ -6,24 +6,30 @@ const clustering = require("density-clustering");
 
 const app = express();
 app.use(cors());
+
+// Health check route
 app.get("/", (req, res) => {
   res.send("God’s Eye backend is running.");
 });
+
+// IMPORTANT: use Render's dynamic port
 const PORT = process.env.PORT || 3000;
 
+// Start server
 const server = app.listen(PORT, () => {
   console.log("God’s Eye V7 running on port " + PORT);
 });
 
+// WebSocket server
 const wss = new WebSocket.Server({ server });
+
 let clients = [];
 
-let timeline = [];
-let historyMemory = {};
-
-wss.on("connection", ws => {
+wss.on("connection", (ws) => {
   clients.push(ws);
-  ws.on("close", () => clients = clients.filter(c => c !== ws));
+  ws.on("close", () => {
+    clients = clients.filter(c => c !== ws);
+  });
 });
 
 function broadcast(data) {
@@ -34,6 +40,7 @@ function broadcast(data) {
   });
 }
 
+// Fetch flight data
 async function fetchFlights() {
   try {
     const res = await axios.get("https://opensky-network.org/api/states/all");
@@ -46,6 +53,7 @@ async function fetchFlights() {
   }
 }
 
+// Cluster detection
 function detectClusters(flights) {
   const dataset = flights.map(f => [f.lat, f.lon]);
 
@@ -55,29 +63,30 @@ function detectClusters(flights) {
   return clusters.map(cluster => {
     const pts = cluster.map(i => dataset[i]);
 
-    const lat = pts.reduce((a,p)=>a+p[0],0)/pts.length;
-    const lon = pts.reduce((a,p)=>a+p[1],0)/pts.length;
+    const lat = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+    const lon = pts.reduce((a, p) => a + p[1], 0) / pts.length;
 
     return { lat, lon, size: pts.length };
   });
 }
+
+// Score clusters
+let historyMemory = {};
 
 function scoreClusters(clusters) {
   return clusters.map(c => {
     const key = `${Math.round(c.lat)}_${Math.round(c.lon)}`;
 
     if (!historyMemory[key]) historyMemory[key] = 0;
-    historyMemory[key] += 1;
+    historyMemory[key]++;
 
     const score = (c.size * 0.5) + (historyMemory[key] * 5);
 
-    return {
-      ...c,
-      score
-    };
+    return { ...c, score };
   });
 }
 
+// Main update loop
 async function updateLoop() {
   const flights = await fetchFlights();
   const clusters = detectClusters(flights);
@@ -85,17 +94,11 @@ async function updateLoop() {
 
   const snapshot = {
     time: Date.now(),
-    flights,
     clusters: scored
   };
 
-  timeline.push(snapshot);
-  if (timeline.length > 100) timeline.shift();
-
-  broadcast({
-    ...snapshot,
-    timeline
-  });
+  broadcast(snapshot);
 }
 
+// Run every 4 seconds
 setInterval(updateLoop, 4000);
