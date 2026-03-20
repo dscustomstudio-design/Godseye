@@ -3,274 +3,320 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>God's Eye V13</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<title>God's Eye V14</title>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Cesium.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@4.1.3/dist/satellite.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#000}
-#map{position:fixed;inset:0;z-index:0}
-
-/* leaflet overrides */
-.leaflet-control-attribution{display:none!important}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes sat-pulse{0%,100%{opacity:.9}50%{opacity:.5}}
-.leaflet-control-zoom{border:1px solid rgba(0,212,255,.25)!important;background:rgba(2,6,14,.92)!important}
-.leaflet-control-zoom a{color:#00d4ff!important;background:transparent!important;border-bottom:1px solid rgba(0,212,255,.15)!important;line-height:26px!important}
-.leaflet-control-zoom a:hover{background:rgba(0,212,255,.12)!important}
-.leaflet-popup-content-wrapper{background:rgba(2,6,14,.97);border:1px solid rgba(0,212,255,.3);border-radius:3px;color:#00ff9d;font-family:'Share Tech Mono',monospace;font-size:11px}
-.leaflet-popup-tip{background:rgba(2,6,14,.97)}
-.leaflet-popup-close-button{color:#00d4ff!important}
-
-:root{--g:#00ff9d;--c:#00d4ff;--r:#ff3b3b;--a:#ffc000;--p:#b06fff;
-  --panel:rgba(2,6,14,0.95);--border:rgba(0,212,255,0.18)}
-
+html,body,#cesiumContainer{width:100%;height:100%;overflow:hidden;background:#000}
+:root{--g:#00ff9d;--c:#00d4ff;--r:#ff3b3b;--a:#ffc000;--p:#b06fff;--s:#fbbf24;
+  --panel:rgba(2,6,14,0.95);--border:rgba(0,212,255,0.18);}
 body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px)}
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);}
+.panel{position:fixed;background:var(--panel);border:1px solid var(--border);border-radius:3px;
+  font-family:'Share Tech Mono',monospace;color:var(--g);font-size:11px;}
 
-.panel{position:fixed;background:var(--panel);border:1px solid var(--border);
-  border-radius:3px;font-family:'Share Tech Mono',monospace;color:var(--g);font-size:11px}
+/* ── LEFT HUD ── */
+#hud{top:10px;left:10px;width:368px;max-height:calc(100vh - 44px);
+  display:flex;flex-direction:column;overflow:hidden;z-index:100;
+  transition:width .2s,max-height .2s;}
 
-/* LEFT HUD */
-#hud{top:10px;left:10px;width:370px;max-height:calc(100vh - 44px);
-  display:flex;flex-direction:column;overflow:hidden;z-index:1000}
+/* collapsed state — slim vertical bar */
+#hud.collapsed{width:36px;max-height:calc(100vh - 44px);overflow:hidden;}
+#hud.collapsed #hud-body{display:none;}
+#hud.collapsed #hud-top .sys-title{display:none;}
+#hud.collapsed #hud-top .sys-sub{display:none;}
+#hud.collapsed #hud-top{padding:9px 0 9px;justify-content:center;flex-direction:column;gap:10px;height:100%;align-items:center;}
+#hud.collapsed #collapse-btn{transform:rotate(180deg);}
+
 #hud-top{padding:9px 13px 7px;border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.sys-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#fff;letter-spacing:4px}
-.sys-sub{font-size:9px;color:var(--c);letter-spacing:1px;margin-top:1px}
-.dot{width:7px;height:7px;border-radius:50%;background:#333;flex-shrink:0}
-.dot.live{background:var(--g);animation:blink 1.4s infinite}
-.dot.fetching{background:var(--a);animation:blink .5s infinite}
-.dot.err{background:var(--r)}
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.sys-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#fff;letter-spacing:4px;}
+.sys-sub{font-size:9px;color:var(--c);letter-spacing:1px;margin-top:1px;}
+
+/* collapse button */
+#collapse-btn{background:transparent;border:1px solid var(--border);border-radius:2px;
+  color:var(--c);cursor:pointer;font-size:11px;padding:2px 5px;transition:transform .2s,background .15s;
+  flex-shrink:0;line-height:1;}
+#collapse-btn:hover{background:rgba(0,212,255,.15);}
+
+.dot{width:7px;height:7px;border-radius:50%;background:#333;flex-shrink:0;}
+.dot.live{background:var(--g);animation:blink 1.4s infinite;}
+.dot.fetching{background:var(--a);animation:blink .5s infinite;}
+.dot.err{background:var(--r);}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
 
-#search-wrap{padding:7px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:4px}
+/* everything below the title bar collapses */
+#hud-body{display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;}
+
+#search-wrap{padding:7px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:4px;}
 #search{flex:1;background:rgba(0,255,157,.05);border:1px solid rgba(0,255,157,.18);border-radius:3px;
-  color:var(--g);font-family:inherit;font-size:11px;padding:5px 8px;outline:none}
-#search:focus{border-color:rgba(0,255,157,.6)}
-#search::placeholder{color:rgba(0,255,157,.3)}
+  color:var(--g);font-family:inherit;font-size:11px;padding:5px 8px;outline:none;}
+#search:focus{border-color:rgba(0,255,157,.6);}
+#search::placeholder{color:rgba(0,255,157,.3);}
 #search-btn{padding:5px 9px;border-radius:3px;border:1px solid rgba(0,255,157,.5);
   background:rgba(0,255,157,.1);color:var(--g);font-family:inherit;font-size:10px;
-  cursor:pointer;letter-spacing:1px;transition:background .15s;white-space:nowrap}
-#search-btn:hover{background:rgba(0,255,157,.25)}
+  cursor:pointer;letter-spacing:1px;transition:background .15s;white-space:nowrap;}
+#search-btn:hover{background:rgba(0,255,157,.25);}
 #date-range{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:3px;
-  color:var(--c);font-family:inherit;font-size:10px;padding:4px 5px;outline:none;cursor:pointer}
-#date-range option{background:#060e1a}
+  color:var(--c);font-family:inherit;font-size:10px;padding:4px 5px;outline:none;cursor:pointer;}
+#date-range option{background:#060e1a;}
 
-#layer-bar{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+#layer-bar{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .lyr-btn{padding:2px 7px;border-radius:2px;border:1px solid;cursor:pointer;font-family:inherit;
-  font-size:9px;font-weight:600;background:transparent;transition:opacity .15s}
-.lyr-btn.off{opacity:.2}
+  font-size:9px;font-weight:600;background:transparent;transition:opacity .15s;}
+.lyr-btn.off{opacity:.2;}
 
-#src-filters{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+#src-filters{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .src-btn{padding:2px 6px;border-radius:2px;border:1px solid;cursor:pointer;font-family:inherit;
-  font-size:9px;font-weight:600;background:transparent;transition:opacity .15s;color:#fff}
-.src-btn.off{opacity:.2}
+  font-size:9px;font-weight:600;background:transparent;transition:opacity .15s;color:#fff;}
+.src-btn.off{opacity:.2;}
 
-#cat-filters{display:flex;flex-wrap:wrap;gap:3px;padding:4px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+#cat-filters{display:flex;flex-wrap:wrap;gap:3px;padding:4px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .cat-btn{display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:2px;
   border:1px solid var(--border);cursor:pointer;font-family:inherit;font-size:9px;
-  background:transparent;color:var(--c);transition:opacity .15s}
-.cat-btn.off{opacity:.2}
+  background:transparent;color:var(--c);transition:opacity .15s;}
+.cat-btn.off{opacity:.2;}
 
-#stats{display:flex;gap:8px;padding:4px 12px;border-bottom:1px solid var(--border);
-  font-size:9px;color:rgba(0,255,157,.4);flex-shrink:0;flex-wrap:wrap}
-#stats span{color:var(--g)}
+#stats{display:flex;gap:6px;padding:4px 12px;border-bottom:1px solid var(--border);
+  font-size:9px;color:rgba(0,255,157,.4);flex-shrink:0;flex-wrap:wrap;}
+#stats span{color:var(--g);}
 
 #lbar{height:2px;background:linear-gradient(90deg,transparent,var(--c),transparent);
-  background-size:200%;animation:sweep 1s linear infinite;display:none;flex-shrink:0}
+  background-size:200%;animation:sweep 1s linear infinite;display:none;flex-shrink:0;}
 @keyframes sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 #debug-toggle{width:100%;padding:3px 10px;background:rgba(0,212,255,.04);border:none;
   border-bottom:1px solid var(--border);color:var(--c);font-family:'Share Tech Mono',monospace;
-  font-size:9px;cursor:pointer;text-align:left;flex-shrink:0}
-#debug-wrap{display:none;border-bottom:1px solid var(--border);flex-shrink:0}
-#debug-wrap.show{display:block}
-#debug-inner{padding:5px 10px;font-size:9px;max-height:88px;overflow-y:auto;line-height:1.6}
-#debug-inner .ok{color:#00ff9d}#debug-inner .fail{color:#ff3b3b}#debug-inner .warn{color:#ffc000}
+  font-size:9px;cursor:pointer;text-align:left;flex-shrink:0;}
+#debug-wrap{display:none;border-bottom:1px solid var(--border);flex-shrink:0;}
+#debug-wrap.show{display:block;}
+#debug-inner{padding:5px 10px;font-size:9px;max-height:80px;overflow-y:auto;line-height:1.6;}
+#debug-inner .ok{color:#00ff9d;}#debug-inner .fail{color:#ff3b3b;}#debug-inner .warn{color:#ffc000;}
 
-#event-list{overflow-y:auto;flex:1}
-#event-list::-webkit-scrollbar{width:2px}
-#event-list::-webkit-scrollbar-thumb{background:var(--border)}
+#event-list{overflow-y:auto;flex:1;}
+#event-list::-webkit-scrollbar{width:2px;}
+#event-list::-webkit-scrollbar-thumb{background:var(--border);}
 .ev{display:flex;align-items:flex-start;gap:7px;padding:6px 11px;cursor:pointer;
-  border-left:2px solid transparent;transition:background .1s}
-.ev:hover{background:rgba(0,255,157,.04)}
-.ev.sel{background:rgba(0,255,157,.08);border-left-color:var(--g)}
-.ev.threat{border-left-color:var(--r)}
-.ev.warn{border-left-color:var(--a)}
-.ev .ico{font-size:14px;flex-shrink:0;margin-top:1px}
-.ev .body{flex:1;min-width:0}
+  border-left:2px solid transparent;transition:background .1s;}
+.ev:hover{background:rgba(0,255,157,.04);}
+.ev.sel{background:rgba(0,255,157,.08);border-left-color:var(--g);}
+.ev.threat{border-left-color:var(--r);}
+.ev.warn{border-left-color:var(--a);}
+.ev .ico{font-size:14px;flex-shrink:0;margin-top:1px;}
+.ev .body{flex:1;min-width:0;}
 .ev .headline{color:#ddd;font-size:10px;line-height:1.4;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ev .meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
-.ev .src-tag{font-size:8px;padding:1px 4px;border-radius:2px;font-weight:600}
-.ev .loc{font-size:9px;color:var(--c)}
-.ev .age{font-size:9px;color:rgba(0,255,157,.35)}
-.ev .sbar{width:22px;flex-shrink:0}
-.ev .sbar-fill{height:3px;border-radius:1px;background:var(--g);margin-top:7px}
-.ev.threat .sbar-fill{background:var(--r)}
-.ev.warn .sbar-fill{background:var(--a)}
-#empty{padding:18px 12px;color:rgba(0,255,157,.3);font-size:11px;line-height:1.7}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.ev .meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap;}
+.ev .src-tag{font-size:8px;padding:1px 4px;border-radius:2px;font-weight:600;}
+.ev .loc{font-size:9px;color:var(--c);}
+.ev .age{font-size:9px;color:rgba(0,255,157,.35);}
+.ev .sbar{width:22px;flex-shrink:0;}
+.ev .sbar-fill{height:3px;border-radius:1px;background:var(--g);margin-top:7px;}
+.ev.threat .sbar-fill{background:var(--r);}
+.ev.warn .sbar-fill{background:var(--a);}
+#empty{padding:18px 12px;color:rgba(0,255,157,.3);font-size:11px;line-height:1.7;}
 
-/* RIGHT TICKER */
+/* ── RIGHT TICKER ── */
 #ticker{top:10px;right:10px;width:262px;max-height:calc(100vh - 44px);
-  display:flex;flex-direction:column;overflow:hidden;z-index:1000}
-#ticker-head{padding:7px 11px;border-bottom:1px solid var(--border);
-  font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;
-  color:var(--a);letter-spacing:2px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:space-between}
-#ticker-tabs{display:flex;gap:3px}
+  display:flex;flex-direction:column;overflow:hidden;z-index:100;transition:width .2s;}
+#ticker.collapsed{width:36px;}
+#ticker.collapsed #ticker-body{display:none;}
+#ticker.collapsed #ticker-head{justify-content:center;padding:9px 0;flex-direction:column;gap:8px;height:100%;align-items:center;}
+#ticker.collapsed #ticker-head span{display:none;}
+#ticker.collapsed #ticker-tabs{display:none;}
+#ticker.collapsed #ticker-collapse-btn{transform:rotate(180deg);}
+
+#ticker-head{padding:7px 11px;border-bottom:1px solid var(--border);font-family:'Rajdhani',sans-serif;
+  font-size:13px;font-weight:600;color:var(--a);letter-spacing:2px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;}
+#ticker-collapse-btn{background:transparent;border:1px solid var(--border);border-radius:2px;
+  color:var(--c);cursor:pointer;font-size:11px;padding:2px 5px;transition:transform .2s,background .15s;flex-shrink:0;}
+#ticker-collapse-btn:hover{background:rgba(0,212,255,.15);}
+#ticker-tabs{display:flex;gap:3px;}
 .ttab{font-size:8px;padding:2px 5px;border-radius:2px;border:1px solid var(--border);
-  cursor:pointer;font-family:'Share Tech Mono',monospace;color:rgba(0,255,157,.4);background:transparent}
-.ttab.on{color:var(--g);border-color:var(--g);background:rgba(0,255,157,.08)}
-#ticker-list{overflow-y:auto;flex:1}
-#ticker-list::-webkit-scrollbar{width:2px}
-#ticker-list::-webkit-scrollbar-thumb{background:var(--border)}
-.tick{padding:5px 9px;border-bottom:1px solid rgba(0,200,255,.05);cursor:pointer}
-.tick:hover{background:rgba(0,200,255,.04)}
-.tick .t-src{font-size:8px;font-weight:600;margin-bottom:2px}
+  cursor:pointer;font-family:'Share Tech Mono',monospace;color:rgba(0,255,157,.4);background:transparent;}
+.ttab.on{color:var(--g);border-color:var(--g);background:rgba(0,255,157,.08);}
+#ticker-body{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+#ticker-list{overflow-y:auto;flex:1;}
+#ticker-list::-webkit-scrollbar{width:2px;}
+#ticker-list::-webkit-scrollbar-thumb{background:var(--border);}
+.tick{padding:5px 9px;border-bottom:1px solid rgba(0,200,255,.05);cursor:pointer;}
+.tick:hover{background:rgba(0,200,255,.04);}
+.tick .t-src{font-size:8px;font-weight:600;margin-bottom:2px;}
 .tick .t-hl{font-size:9px;color:#bbb;line-height:1.3;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.tick .t-meta{font-size:8px;color:rgba(0,255,157,.28);margin-top:2px}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.tick .t-meta{font-size:8px;color:rgba(0,255,157,.28);margin-top:2px;}
 
-/* WEATHER PANEL */
-#wx-panel{bottom:32px;left:10px;width:228px;padding:8px 12px;font-size:9px;line-height:1.9;z-index:1000}
-#wx-panel .wx-title{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--a);letter-spacing:1px;margin-bottom:4px}
-.wx-row{display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,200,255,.07);padding:1px 0}
-.wx-row span:last-child{color:#ddd}
+/* ── WEATHER PANEL ── */
+#wx-panel{bottom:32px;left:10px;width:228px;padding:8px 12px;font-size:9px;line-height:1.9;z-index:100;
+  transition:left .2s;}
+#wx-panel .wx-title{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--a);letter-spacing:1px;margin-bottom:4px;}
+.wx-row{display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,200,255,.07);padding:1px 0;}
+.wx-row span:last-child{color:#ddd;}
 
-/* FLIGHT BADGE */
-#flight-badge{top:10px;left:50%;transform:translateX(-50%);
-  padding:4px 14px;font-size:10px;color:var(--p);letter-spacing:1px;z-index:1000}
+/* ── BADGE ── */
+#badge-wrap{top:10px;left:50%;transform:translateX(-50%);
+  padding:4px 14px;font-size:10px;letter-spacing:1px;z-index:100;
+  display:flex;gap:14px;align-items:center;}
+#flight-ct{color:var(--p);}
+#sat-ct{color:var(--s);}
 
-/* STATUS BAR */
+/* ── TOOLTIP ── */
+#tooltip{position:fixed;background:rgba(1,5,12,.97);border:1px solid var(--c);border-radius:3px;
+  padding:9px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--c);
+  pointer-events:none;display:none;max-width:280px;line-height:1.8;z-index:9999;}
+#tooltip strong{color:#fff;font-size:11px;display:block;margin-bottom:4px;}
+
+/* ── STATUS BAR ── */
 #statusbar{position:fixed;bottom:0;left:0;right:0;height:24px;background:rgba(1,5,12,.95);
   border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:14px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.35);z-index:1000}
-#statusbar .val{color:var(--g)}
-#clock{margin-left:auto;color:var(--a)}
+  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.35);z-index:100;}
+#statusbar .val{color:var(--g);}
+#clock{margin-left:auto;color:var(--a);}
 
-/* LEGEND */
+/* ── LEGEND ── */
 #legend{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
   display:flex;gap:10px;align-items:center;padding:4px 12px;
   background:rgba(2,6,14,.92);border:1px solid var(--border);border-radius:3px;
   font-family:'Share Tech Mono',monospace;font-size:9px;
-  color:rgba(0,255,157,.45);white-space:nowrap;z-index:1000}
-.leg{display:flex;align-items:center;gap:4px}
-.leg-dot{width:7px;height:7px;border-radius:50%}
+  color:rgba(0,255,157,.45);white-space:nowrap;z-index:100;}
+.leg{display:flex;align-items:center;gap:4px;}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
 </style>
 </head>
 <body>
-<div id="map"></div>
+<div id="cesiumContainer"></div>
 
+<!-- LEFT HUD -->
 <div class="panel" id="hud">
   <div id="hud-top">
     <div>
       <div class="sys-title">⬡ GOD'S EYE</div>
-      <div class="sys-sub">LIVE GLOBAL INTEL — V13</div>
+      <div class="sys-sub">LIVE GLOBAL INTEL — V14</div>
     </div>
-    <div style="display:flex;align-items:center;gap:6px">
+    <div style="display:flex;align-items:center;gap:6px;">
       <span id="status-txt" style="font-size:9px;color:rgba(0,255,157,.4)">INIT</span>
       <div class="dot" id="status-dot"></div>
+      <button id="collapse-btn" onclick="toggleHUD()" title="Collapse panel">◀</button>
     </div>
   </div>
 
-  <div id="search-wrap">
-    <input id="search" type="text" placeholder="Search headlines, locations, callsigns…" autocomplete="off">
-    <button id="search-btn" onclick="runSearch()">⌕ RUN</button>
-    <select id="date-range">
-      <option value="1">24h</option>
-      <option value="3">3d</option>
-      <option value="7">7d</option>
-      <option value="14">14d</option>
-      <option value="30" selected>30d</option>
-    </select>
-  </div>
+  <div id="hud-body">
+    <div id="search-wrap">
+      <input id="search" type="text" placeholder="Search headlines, locations, callsigns…" autocomplete="off">
+      <button id="search-btn" onclick="runSearch()">⌕ RUN</button>
+      <select id="date-range">
+        <option value="1">24h</option>
+        <option value="3">3d</option>
+        <option value="7">7d</option>
+        <option value="14">14d</option>
+        <option value="30" selected>30d</option>
+      </select>
+    </div>
 
-  <div id="layer-bar">
-    <button class="lyr-btn" id="lyr-news"    style="border-color:#00ff9d;color:#00ff9d" onclick="toggleLayer('news')">📰 NEWS</button>
-    <button class="lyr-btn" id="lyr-flights" style="border-color:#b06fff;color:#b06fff" onclick="toggleLayer('flights')">✈️ FLIGHTS</button>
-    <button class="lyr-btn" id="lyr-sats"    style="border-color:#fbbf24;color:#fbbf24" onclick="toggleLayer('sats')">🛰️ SATS</button>
-    <button class="lyr-btn" id="lyr-weather" style="border-color:#ffc000;color:#ffc000" onclick="toggleLayer('weather')">🌩 ALERTS</button>
-    <button class="lyr-btn" id="lyr-storms"  style="border-color:#ff6600;color:#ff6600" onclick="toggleLayer('storms')">🌀 STORMS</button>
-  </div>
+    <div id="layer-bar">
+      <button class="lyr-btn" id="lyr-news"    style="border-color:#00ff9d;color:#00ff9d" onclick="toggleLayer('news')">📰 NEWS</button>
+      <button class="lyr-btn" id="lyr-flights" style="border-color:#b06fff;color:#b06fff" onclick="toggleLayer('flights')">✈️ FLIGHTS</button>
+      <button class="lyr-btn" id="lyr-sats"    style="border-color:#fbbf24;color:#fbbf24" onclick="toggleLayer('sats')">🛰️ SATS</button>
+      <button class="lyr-btn" id="lyr-weather" style="border-color:#ffc000;color:#ffc000" onclick="toggleLayer('weather')">🌩 ALERTS</button>
+      <button class="lyr-btn" id="lyr-storms"  style="border-color:#ff6600;color:#ff6600" onclick="toggleLayer('storms')">🌀 STORMS</button>
+    </div>
 
-  <div id="src-filters">
-    <button class="src-btn" data-src="BBC"      style="border-color:#bb1919;background:#bb191912" onclick="toggleSrc('BBC')">BBC</button>
-    <button class="src-btn" data-src="CNN"      style="border-color:#cc0000;background:#cc000012" onclick="toggleSrc('CNN')">CNN</button>
-    <button class="src-btn" data-src="FOX"      style="border-color:#2255bb;background:#2255bb12" onclick="toggleSrc('FOX')">FOX</button>
-    <button class="src-btn" data-src="ALJAZ"    style="border-color:#009970;background:#00997012" onclick="toggleSrc('ALJAZ')">AL JAZ</button>
-    <button class="src-btn" data-src="NBC"      style="border-color:#fa8c00;background:#fa8c0012" onclick="toggleSrc('NBC')">NBC</button>
-    <button class="src-btn" data-src="REUTERS"  style="border-color:#ff6900;background:#ff690012" onclick="toggleSrc('REUTERS')">REUTERS</button>
-    <button class="src-btn" data-src="AP"       style="border-color:#aaa;background:#aaa1"        onclick="toggleSrc('AP')">AP</button>
-    <button class="src-btn" data-src="GUARDIAN" style="border-color:#005689;background:#00568912" onclick="toggleSrc('GUARDIAN')">GUARDIAN</button>
-    <button class="src-btn" data-src="NOAA"     style="border-color:#ffc000;background:#ffc00012" onclick="toggleSrc('NOAA')">NOAA</button>
-    <button class="src-btn" data-src="OPENSKY"  style="border-color:#b06fff;background:#b06fff12" onclick="toggleSrc('OPENSKY')">OPENSKY</button>
-    <button class="src-btn" data-src="CELESTRAK" style="border-color:#fbbf24;background:#fbbf2412" onclick="toggleSrc('CELESTRAK')">SATS</button>
-  </div>
+    <div id="src-filters">
+      <button class="src-btn" data-src="BBC"       style="border-color:#bb1919;background:#bb191912" onclick="toggleSrc('BBC')">BBC</button>
+      <button class="src-btn" data-src="CNN"       style="border-color:#cc0000;background:#cc000012" onclick="toggleSrc('CNN')">CNN</button>
+      <button class="src-btn" data-src="FOX"       style="border-color:#2255bb;background:#2255bb12" onclick="toggleSrc('FOX')">FOX</button>
+      <button class="src-btn" data-src="ALJAZ"     style="border-color:#009970;background:#00997012" onclick="toggleSrc('ALJAZ')">AL JAZ</button>
+      <button class="src-btn" data-src="NBC"       style="border-color:#fa8c00;background:#fa8c0012" onclick="toggleSrc('NBC')">NBC</button>
+      <button class="src-btn" data-src="REUTERS"   style="border-color:#ff6900;background:#ff690012" onclick="toggleSrc('REUTERS')">REUTERS</button>
+      <button class="src-btn" data-src="AP"        style="border-color:#aaa;background:#aaa1"        onclick="toggleSrc('AP')">AP</button>
+      <button class="src-btn" data-src="GUARDIAN"  style="border-color:#005689;background:#00568912" onclick="toggleSrc('GUARDIAN')">GUARDIAN</button>
+      <button class="src-btn" data-src="NOAA"      style="border-color:#ffc000;background:#ffc00012" onclick="toggleSrc('NOAA')">NOAA</button>
+      <button class="src-btn" data-src="OPENSKY"   style="border-color:#b06fff;background:#b06fff12" onclick="toggleSrc('OPENSKY')">OPENSKY</button>
+      <button class="src-btn" data-src="CELESTRAK" style="border-color:#fbbf24;background:#fbbf2412" onclick="toggleSrc('CELESTRAK')">SATS</button>
+    </div>
 
-  <div id="cat-filters">
-    <button class="cat-btn" data-cat="military"  onclick="toggleCat('military')">🪖 Military</button>
-    <button class="cat-btn" data-cat="conflict"  onclick="toggleCat('conflict')">⚔️ Conflict</button>
-    <button class="cat-btn" data-cat="naval"     onclick="toggleCat('naval')">🚢 Naval</button>
-    <button class="cat-btn" data-cat="aviation"  onclick="toggleCat('aviation')">✈️ Aviation</button>
-    <button class="cat-btn" data-cat="weather"   onclick="toggleCat('weather')">🌩 Weather</button>
-    <button class="cat-btn" data-cat="disaster"  onclick="toggleCat('disaster')">🌊 Disaster</button>
-    <button class="cat-btn" data-cat="politics"  onclick="toggleCat('politics')">🏛 Politics</button>
-    <button class="cat-btn" data-cat="economy"   onclick="toggleCat('economy')">📈 Economy</button>
-    <button class="cat-btn" data-cat="breaking"  onclick="toggleCat('breaking')">🔴 Breaking</button>
-  </div>
+    <div id="cat-filters">
+      <button class="cat-btn" data-cat="military"  onclick="toggleCat('military')">🪖 Military</button>
+      <button class="cat-btn" data-cat="conflict"  onclick="toggleCat('conflict')">⚔️ Conflict</button>
+      <button class="cat-btn" data-cat="naval"     onclick="toggleCat('naval')">🚢 Naval</button>
+      <button class="cat-btn" data-cat="aviation"  onclick="toggleCat('aviation')">✈️ Aviation</button>
+      <button class="cat-btn" data-cat="weather"   onclick="toggleCat('weather')">🌩 Weather</button>
+      <button class="cat-btn" data-cat="disaster"  onclick="toggleCat('disaster')">🌊 Disaster</button>
+      <button class="cat-btn" data-cat="politics"  onclick="toggleCat('politics')">🏛 Politics</button>
+      <button class="cat-btn" data-cat="economy"   onclick="toggleCat('economy')">📈 Economy</button>
+      <button class="cat-btn" data-cat="breaking"  onclick="toggleCat('breaking')">🔴 Breaking</button>
+    </div>
 
-  <div id="stats">
-    <div>News: <span id="ct-news">0</span></div>
-    <div>Flights: <span id="ct-flights">0</span></div>
-    <div>Sats: <span id="ct-sats">0</span></div>
-    <div>WX: <span id="ct-alerts">0</span></div>
-    <div>Storms: <span id="ct-storms">0</span></div>
-  </div>
+    <div id="stats">
+      <div>News: <span id="ct-news">0</span></div>
+      <div>Flights: <span id="ct-flights">0</span></div>
+      <div>Sats: <span id="ct-sats">0</span></div>
+      <div>WX: <span id="ct-alerts">0</span></div>
+      <div>Storms: <span id="ct-storms">0</span></div>
+    </div>
 
-  <button id="debug-toggle" onclick="toggleDebug()">▶ FEED DEBUG LOG</button>
-  <div id="debug-wrap"><div id="debug-inner"></div></div>
-  <div id="lbar"></div>
-  <div id="event-list"><div id="empty">⟳ Initialising intel feeds…</div></div>
+    <button id="debug-toggle" onclick="toggleDebug()">▶ FEED DEBUG LOG</button>
+    <div id="debug-wrap"><div id="debug-inner"></div></div>
+    <div id="lbar"></div>
+    <div id="event-list"><div id="empty">⟳ Initialising intel feeds…</div></div>
+  </div>
 </div>
 
+<!-- RIGHT TICKER -->
 <div class="panel" id="ticker">
   <div id="ticker-head">
     <span>📡 FEED</span>
-    <div id="ticker-tabs">
-      <button class="ttab on" onclick="switchTab('news')">NEWS</button>
-      <button class="ttab"    onclick="switchTab('flights')">FLIGHTS</button>
-      <button class="ttab"    onclick="switchTab('sats')">SATS</button>
-      <button class="ttab"    onclick="switchTab('wx')">WX</button>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <div id="ticker-tabs">
+        <button class="ttab on" onclick="switchTab('news')">NEWS</button>
+        <button class="ttab"    onclick="switchTab('flights')">FLIGHTS</button>
+        <button class="ttab"    onclick="switchTab('sats')">SATS</button>
+        <button class="ttab"    onclick="switchTab('wx')">WX</button>
+      </div>
+      <button id="ticker-collapse-btn" onclick="toggleTicker()" title="Collapse ticker">▶</button>
     </div>
   </div>
-  <div id="ticker-list"></div>
+  <div id="ticker-body">
+    <div id="ticker-list"></div>
+  </div>
 </div>
 
-<div class="panel" id="flight-badge">✈ <span id="live-flight-ct">0</span> LIVE AIRCRAFT</div>
+<!-- BADGE -->
+<div class="panel" id="badge-wrap">
+  <span id="flight-ct">✈ <span id="live-flight-ct">0</span> AIRCRAFT</span>
+  <span id="sat-ct">🛰️ <span id="live-sat-ct">0</span> SATS</span>
+</div>
 
+<!-- WEATHER -->
 <div class="panel" id="wx-panel">
   <div class="wx-title">🌡 SURFACE CONDITIONS</div>
   <div id="wx-rows"><div style="color:rgba(0,255,157,.3)">Fetching NOAA…</div></div>
 </div>
 
+<!-- TOOLTIP -->
+<div id="tooltip"></div>
+
+<!-- STATUS BAR -->
 <div id="statusbar">
   <span>SYS: <span class="val">ONLINE</span></span>
   <span>NEWS: <span class="val" id="sb-news">–</span></span>
   <span>FLIGHTS: <span class="val" id="sb-flights">–</span></span>
+  <span>SATS: <span class="val" id="sb-sats">–</span></span>
   <span>NOAA: <span class="val" id="sb-noaa">–</span></span>
   <span>UPDATED: <span class="val" id="sb-ref">–</span></span>
   <span id="clock">──</span>
 </div>
 
+<!-- LEGEND -->
 <div id="legend">
   <div class="leg"><div class="leg-dot" style="background:#ff3b3b"></div>Conflict</div>
   <div class="leg"><div class="leg-dot" style="background:#ffc000"></div>WX Alert</div>
   <div class="leg"><div class="leg-dot" style="background:#ff6600"></div>Storm</div>
-  <div class="leg"><div class="leg-dot" style="background:#b06fff"></div>Live Flight</div>
+  <div class="leg"><div class="leg-dot" style="background:#b06fff"></div>Flight</div>
   <div class="leg"><div class="leg-dot" style="background:#fbbf24"></div>Satellite</div>
   <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Politics</div>
   <div class="leg"><div class="leg-dot" style="background:#00ff9d"></div>General</div>
@@ -278,34 +324,36 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
 
 <script>
 /* ══════════════════════════════════════════
-   PROXY — your Render Express server
-   All feeds fetched server-side, zero CORS
+   PROXY — Render Express server
 ══════════════════════════════════════════ */
 const PROXY = u => `/proxy?url=${encodeURIComponent(u)}`;
 
 /* ══════════════════════════════════════════
-   LEAFLET MAP — dark CARTO tiles
+   CESIUM — dark CARTO tiles, no ion deps
 ══════════════════════════════════════════ */
-const map = L.map('map', {
-  center: [20, 10],
-  zoom: 3,
-  minZoom: 2,
-  maxZoom: 14,
-  zoomControl: true,
-  attributionControl: false,
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc4ZDkiLCJpZCI6NTc3MzMsImlhdCI6MTYyMzMxNzg3N30.EcK_1XusvHCBdHiMQFNnEItF1TxB8bvdPnFXmCr3EfI';
+
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  imageryProvider: new Cesium.UrlTemplateImageryProvider({
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    subdomains: ['a','b','c','d'],
+    credit: '© OpenStreetMap contributors © CARTO',
+    maximumLevel: 19,
+  }),
+  baseLayerPicker: false, navigationHelpButton: true,
+  homeButton: true, geocoder: false, sceneModePicker: true,
+  timeline: false, animation: false, fullscreenButton: false,
+  infoBox: false, selectionIndicator: false, shouldAnimate: true,
+  creditContainer: document.createElement('div'),
 });
-
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  subdomains: 'abcd',
-  maxZoom: 19,
-}).addTo(map);
-
-// Layer groups — each data type on its own layer
-const newsLayer    = L.layerGroup().addTo(map);
-const flightLayer  = L.layerGroup().addTo(map);
-const satLayer     = L.layerGroup().addTo(map);
-const weatherLayer = L.layerGroup().addTo(map);
-const stormLayer   = L.layerGroup().addTo(map);
+viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#020810');
+viewer.scene.globe.enableLighting = false;
+viewer.scene.globe.showGroundAtmosphere = false;
+viewer.scene.skyBox.show = true;
+viewer.scene.sun.show = false;
+viewer.scene.moon.show = false;
+viewer.scene.skyAtmosphere.show = false;
+viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(15, 20, 19000000), duration: 0 });
 
 /* ══════════════════════════════════════════
    RSS FEEDS
@@ -411,14 +459,15 @@ function assignVehicle(cat,geo){
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let allEvents=[],liveFlights=[],wxAlerts=[],storms=[],liveSats=[];
+let allEvents=[],liveFlights=[],liveSats=[],wxAlerts=[],storms=[];
+let newsEnts={},vehicleEnts=[],flightEnts=[],satEnts=[],weatherEnts=[];
 let activeSrcs=new Set([...RSS_FEEDS.map(s=>s.id),'NOAA','OPENSKY','CELESTRAK']);
 let activeCats=new Set(Object.keys(CAT_RX).concat(['general']));
 let layers={news:true,flights:true,sats:true,weather:true,storms:true};
 let searchQ='',dayRange=30,selectedId=null,tickerTab='news';
 
 /* ══════════════════════════════════════════
-   DEBUG LOG
+   DEBUG
 ══════════════════════════════════════════ */
 const dbg=[];
 function log(cls,msg){
@@ -432,6 +481,24 @@ function toggleDebug(){
   const b=document.getElementById('debug-toggle');
   w.classList.toggle('show');
   b.textContent=w.classList.contains('show')?'▼ FEED DEBUG LOG':'▶ FEED DEBUG LOG';
+}
+
+/* ══════════════════════════════════════════
+   COLLAPSE TOGGLES
+══════════════════════════════════════════ */
+function toggleHUD(){
+  const hud=document.getElementById('hud');
+  const btn=document.getElementById('collapse-btn');
+  hud.classList.toggle('collapsed');
+  btn.textContent=hud.classList.contains('collapsed')?'▶':'◀';
+  // Shift wx panel left when HUD collapses
+  document.getElementById('wx-panel').style.left=hud.classList.contains('collapsed')?'50px':'10px';
+}
+function toggleTicker(){
+  const t=document.getElementById('ticker');
+  const btn=document.getElementById('ticker-collapse-btn');
+  t.classList.toggle('collapsed');
+  btn.textContent=t.classList.contains('collapsed')?'◀':'▶';
 }
 
 /* ══════════════════════════════════════════
@@ -469,48 +536,32 @@ async function fetchRSS(){
 }
 
 /* ══════════════════════════════════════════
-   FETCH OPENSKY — direct call, no proxy needed
-   OpenSky has open CORS headers on their API
+   FETCH OPENSKY
 ══════════════════════════════════════════ */
 async function fetchFlights(){
   try{
     log('warn','Fetching OpenSky (direct)…');
-    // OpenSky allows direct browser calls — no proxy needed
     const url='https://opensky-network.org/api/states/all?lamin=10&lomin=-130&lamax=72&lomax=50';
-    const res=await fetch(url,{signal:AbortSignal.timeout(20000)});
-    if(!res.ok){
-      log('fail',`OpenSky direct: HTTP ${res.status} — trying proxy…`);
-      // fallback to proxy
-      const res2=await fetch(PROXY('https://opensky-network.org/api/states/all?lamin=-60&lomin=-180&lamax=75&lomax=180'),{signal:AbortSignal.timeout(20000)});
-      if(!res2.ok){log('fail',`OpenSky proxy: HTTP ${res2.status}`);return[];}
-      return parseFlights(await res2.json());
+    let res=await fetch(url,{signal:AbortSignal.timeout(20000)}).catch(()=>null);
+    if(!res||!res.ok){
+      log('warn','OpenSky direct failed — trying proxy…');
+      res=await fetch(PROXY('https://opensky-network.org/api/states/all?lamin=-60&lomin=-180&lamax=75&lomax=180'),{signal:AbortSignal.timeout(20000)});
     }
+    if(!res.ok){log('fail',`OpenSky: HTTP ${res.status}`);return[];}
     return parseFlights(await res.json());
   }catch(e){
-    log('fail','OpenSky direct failed: '+e.message+' — trying proxy…');
-    try{
-      const res=await fetch(PROXY('https://opensky-network.org/api/states/all?lamin=-60&lomin=-180&lamax=75&lomax=180'),{signal:AbortSignal.timeout(20000)});
-      if(res.ok) return parseFlights(await res.json());
-    }catch(e2){}
-    log('fail','OpenSky all methods failed');
+    log('fail','OpenSky: '+e.message);
+    document.getElementById('sb-flights').textContent='ERR';
     return[];
   }
 }
-
 function parseFlights(json){
-  if(!json||!json.states){log('fail','OpenSky: no states in response');return[];}
-  const flights=json.states
-    .filter(s=>s[5]!=null&&s[6]!=null&&!s[8])
-    .slice(0,600)
-    .map(s=>({
-      icao:(s[0]||'').trim(),
-      callsign:(s[1]||'N/A').trim(),
-      country:s[2]||'',
-      lon:s[5],lat:s[6],
-      alt:Math.round((s[7]||s[13]||0)*3.281),
-      speed:s[9]?Math.round(s[9]*1.944)+'kn':null,
-      heading:s[10]?Math.round(s[10])+'°':null,
-    }));
+  if(!json?.states){log('fail','OpenSky: no states');return[];}
+  const flights=json.states.filter(s=>s[5]!=null&&s[6]!=null&&!s[8]).slice(0,500).map(s=>({
+    icao:(s[0]||'').trim(),callsign:(s[1]||'N/A').trim(),country:s[2]||'',
+    lon:s[5],lat:s[6],alt:Math.round((s[7]||s[13]||0)*3.281),
+    speed:s[9]?Math.round(s[9]*1.944)+'kn':null,heading:s[10]?Math.round(s[10])+'°':null,
+  }));
   log('ok',`OpenSky: ${flights.length} aircraft`);
   document.getElementById('sb-flights').textContent=flights.length+' ac';
   document.getElementById('live-flight-ct').textContent=flights.length;
@@ -519,7 +570,93 @@ function parseFlights(json){
 }
 
 /* ══════════════════════════════════════════
-   FETCH NOAA ALERTS
+   FETCH SATELLITES (CelesTrak TLE)
+══════════════════════════════════════════ */
+const CELESTRAK_SOURCES=[
+  {name:'ISS',      color:'#00ff9d',url:'https://celestrak.org/SOCRATES/query.php?CATNR=25544&FORMAT=TLE',limit:1},
+  {name:'Starlink', color:'#60a5fa',url:'https://celestrak.org/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle',limit:60},
+  {name:'Military', color:'#ff3b3b',url:'https://celestrak.org/SOCRATES/query.php?GROUP=military&FORMAT=TLE',limit:30},
+  {name:'Weather',  color:'#ffc000',url:'https://celestrak.org/SOCRATES/query.php?GROUP=weather&FORMAT=TLE',limit:20},
+  {name:'GPS',      color:'#a78bfa',url:'https://celestrak.org/SOCRATES/query.php?GROUP=gps-ops&FORMAT=TLE',limit:20},
+];
+
+function parseTLE(txt,name,color,limit){
+  const lines=txt.trim().split('\n').map(l=>l.trim()).filter(Boolean);
+  const sats=[];
+  for(let i=0;i<lines.length-1&&sats.length<limit;i++){
+    const l1=lines[i],l2=lines[i+1];
+    if(l1.startsWith('1 ')&&l2.startsWith('2 ')){
+      try{const rec=satellite.twoline2satrec(l1,l2);sats.push({name,satrec:rec,color,group:name});i++;}catch(e){}
+    }else if(i<lines.length-2){
+      const l3=lines[i+2];
+      if(l2.startsWith('1 ')&&l3.startsWith('2 ')){
+        try{const rec=satellite.twoline2satrec(l2,l3);sats.push({name:l1||name,satrec:rec,color,group:name});i+=2;}catch(e){}
+      }
+    }
+  }
+  return sats;
+}
+
+function propagateSat(satrec,date){
+  try{
+    const pv=satellite.propagate(satrec,date);
+    if(!pv.position)return null;
+    const gmst=satellite.gstime(date);
+    const geo=satellite.eciToGeodetic(pv.position,gmst);
+    return{lat:satellite.degreesLat(geo.latitude),lon:satellite.degreesLong(geo.longitude),alt:Math.round(geo.height)};
+  }catch(e){return null;}
+}
+
+function getOrbitTrack(satrec,steps=60,stepMin=1.5){
+  const pts=[];const now=new Date();
+  for(let i=0;i<steps;i++){
+    const t=new Date(now.getTime()+i*stepMin*60000);
+    const p=propagateSat(satrec,t);
+    if(p)pts.push([p.lat,p.lon]);
+  }
+  // Split at antimeridian
+  const segs=[];let seg=[];
+  for(let i=0;i<pts.length;i++){
+    if(i>0&&Math.abs(pts[i][1]-pts[i-1][1])>180){if(seg.length>1)segs.push(seg);seg=[];}
+    seg.push(pts[i]);
+  }
+  if(seg.length>1)segs.push(seg);
+  return segs;
+}
+
+async function fetchSatellites(){
+  if(!window.satellite){log('warn','satellite.js not ready');return[];}
+  log('warn','Fetching TLEs from CelesTrak…');
+  const all=[];
+  await Promise.allSettled(CELESTRAK_SOURCES.map(async src=>{
+    try{
+      const res=await fetch(PROXY(src.url),{signal:AbortSignal.timeout(15000)});
+      if(!res.ok){log('fail',`TLE ${src.name}: HTTP ${res.status}`);return;}
+      const txt=await res.text();
+      if(!txt||txt.length<10){log('fail',`TLE ${src.name}: empty`);return;}
+      const parsed=parseTLE(txt,src.name,src.color,src.limit);
+      log('ok',`TLE ${src.name}: ${parsed.length} sats`);
+      all.push(...parsed);
+    }catch(e){log('fail',`TLE ${src.name}: ${e.message}`);}
+  }));
+  const now=new Date();
+  const result=all.map(s=>{const p=propagateSat(s.satrec,now);return p?{...s,...p}:null;}).filter(Boolean);
+  log('ok',`Satellites propagated: ${result.length}`);
+  document.getElementById('ct-sats').textContent=result.length;
+  document.getElementById('live-sat-ct').textContent=result.length;
+  document.getElementById('sb-sats').textContent=result.length+' tracked';
+  return result;
+}
+
+function updateSatPositions(){
+  if(!liveSats.length||!window.satellite)return;
+  const now=new Date();
+  liveSats=liveSats.map(s=>{const p=propagateSat(s.satrec,now);return p?{...s,...p}:s;});
+  renderSatellites();
+}
+
+/* ══════════════════════════════════════════
+   FETCH NOAA
 ══════════════════════════════════════════ */
 async function fetchNOAAAlerts(){
   try{
@@ -541,9 +678,6 @@ async function fetchNOAAAlerts(){
   }catch(e){log('fail','NOAA: '+e.message);return[];}
 }
 
-/* ══════════════════════════════════════════
-   FETCH NHC STORMS
-══════════════════════════════════════════ */
 async function fetchNOAAStorms(){
   const all=[];
   for(const feed of['https://www.nhc.noaa.gov/nhc_at1.xml','https://www.nhc.noaa.gov/nhc_ep1.xml']){
@@ -568,9 +702,6 @@ async function fetchNOAAStorms(){
   return all;
 }
 
-/* ══════════════════════════════════════════
-   FETCH NOAA CONDITIONS
-══════════════════════════════════════════ */
 const WX_STATIONS=[{name:'New York',id:'KNYC'},{name:'Miami',id:'KMIA'},{name:'Chicago',id:'KORD'},{name:'Los Angeles',id:'KLAX'}];
 async function fetchNOAAConditions(){
   const results=[];
@@ -596,207 +727,24 @@ async function fetchNOAAConditions(){
 }
 
 /* ══════════════════════════════════════════
-   FETCH SATELLITES — CelesTrak TLE data
-   Parsed client-side with satellite.js
-══════════════════════════════════════════ */
-const SAT_GROUPS = [
-  { name:'ISS',       url:'https://celestrak.org/SOCRATES/query.php?IDENT=ISS&TYPE=ALL&LIMIT=1&FORMAT=tle', color:'#00ff9d', icon:'🛰️' },
-  { name:'Starlink',  url:'https://celestrak.org/SOCRATES/query.php?IDENT=STARLINK&TYPE=ALL&LIMIT=100&FORMAT=tle', color:'#60a5fa', icon:'🛰️' },
-  // Use the simpler groups endpoint
-  { name:'ISS',       url:'https://celestrak.org/SOCRATES/query.php?IDENT=ISS&TYPE=ALL&FORMAT=tle', color:'#00ff9d', icon:'🛰️' },
-];
-
-// CelesTrak group endpoints — much simpler
-const TLE_SOURCES = [
-  { name:'ISS',       color:'#00ff9d', url:'https://celestrak.org/SOCRATES/query.php?CATNR=25544&FORMAT=TLE' },
-  { name:'Starlink',  color:'#60a5fa', url:'https://celestrak.org/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle' },
-  { name:'Military',  color:'#ff3b3b', url:'https://celestrak.org/SOCRATES/query.php?GROUP=military&FORMAT=TLE' },
-  { name:'Weather',   color:'#ffc000', url:'https://celestrak.org/SOCRATES/query.php?GROUP=weather&FORMAT=TLE' },
-  { name:'GPS',       color:'#a78bfa', url:'https://celestrak.org/SOCRATES/query.php?GROUP=gps-ops&FORMAT=TLE' },
-];
-
-// Simpler, reliable CelesTrak URLs
-const CELESTRAK_SOURCES = [
-  { name:'ISS',      color:'#00ff9d', url:'https://celestrak.org/SOCRATES/query.php?CATNR=25544&FORMAT=TLE', limit:1 },
-  { name:'Starlink', color:'#60a5fa', url:'https://celestrak.org/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle', limit:80 },
-  { name:'Military', color:'#ff3b3b', url:'https://celestrak.org/SOCRATES/query.php?GROUP=military&FORMAT=TLE', limit:30 },
-  { name:'Weather',  color:'#ffc000', url:'https://celestrak.org/SOCRATES/query.php?GROUP=weather&FORMAT=TLE', limit:20 },
-  { name:'GPS',      color:'#a78bfa', url:'https://celestrak.org/SOCRATES/query.php?GROUP=gps-ops&FORMAT=TLE', limit:20 },
-];
-
-function parseTLE(txt, name, color, limit) {
-  const lines = txt.trim().split('\n').map(l => l.trim()).filter(Boolean);
-  const sats = [];
-  // TLE format: name line, line1 (starts with 1), line2 (starts with 2)
-  for (let i = 0; i < lines.length - 2 && sats.length < limit; i++) {
-    const l1 = lines[i], l2 = lines[i+1], l3 = lines[i+2];
-    if (l2.startsWith('1 ') && l3.startsWith('2 ')) {
-      try {
-        const satrec = satellite.twoline2satrec(l2, l3);
-        const satName = l1.startsWith('1 ') ? name : l1; // fallback name
-        sats.push({ name: satName, satrec, color, group: name });
-        i += 2; // skip the two TLE lines
-      } catch(e) {}
-    } else if (l1.startsWith('1 ') && l2.startsWith('2 ')) {
-      // Two-line format without name
-      try {
-        const satrec = satellite.twoline2satrec(l1, l2);
-        sats.push({ name, satrec, color, group: name });
-        i += 1;
-      } catch(e) {}
-    }
-  }
-  return sats;
-}
-
-function propagateSat(satrec, date) {
-  try {
-    const posVel = satellite.propagate(satrec, date);
-    if (!posVel.position) return null;
-    const gmst = satellite.gstime(date);
-    const geo = satellite.eciToGeodetic(posVel.position, gmst);
-    return {
-      lat: satellite.degreesLat(geo.latitude),
-      lon: satellite.degreesLong(geo.longitude),
-      alt: Math.round(geo.height), // km
-    };
-  } catch(e) { return null; }
-}
-
-function getOrbitTrack(satrec, steps=60, stepMinutes=1.5) {
-  const points = [];
-  const now = new Date();
-  for (let i = 0; i < steps; i++) {
-    const t = new Date(now.getTime() + i * stepMinutes * 60000);
-    const pos = propagateSat(satrec, t);
-    if (pos) points.push([pos.lat, pos.lon]);
-  }
-  // Split track at antimeridian crossings to avoid lines across the map
-  const segments = [];
-  let seg = [];
-  for (let i = 0; i < points.length; i++) {
-    if (i > 0 && Math.abs(points[i][1] - points[i-1][1]) > 180) {
-      if (seg.length > 1) segments.push(seg);
-      seg = [];
-    }
-    seg.push(points[i]);
-  }
-  if (seg.length > 1) segments.push(seg);
-  return segments;
-}
-
-async function fetchSatellites() {
-  if (!window.satellite) { log('warn', 'satellite.js not loaded yet'); return []; }
-  const allSats = [];
-  log('warn', 'Fetching satellite TLEs from CelesTrak…');
-
-  await Promise.allSettled(CELESTRAK_SOURCES.map(async src => {
-    try {
-      const res = await fetch(PROXY(src.url), { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) { log('fail', `TLE ${src.name}: HTTP ${res.status}`); return; }
-      const txt = await res.text();
-      if (!txt || txt.length < 20) { log('fail', `TLE ${src.name}: empty response`); return; }
-      const parsed = parseTLE(txt, src.name, src.color, src.limit);
-      log('ok', `TLE ${src.name}: ${parsed.length} satellites`);
-      allSats.push(...parsed);
-    } catch(e) {
-      log('fail', `TLE ${src.name}: ${e.message}`);
-    }
-  }));
-
-  // Propagate all to current position
-  const now = new Date();
-  const result = allSats.map(s => {
-    const pos = propagateSat(s.satrec, now);
-    if (!pos) return null;
-    return { ...s, lat: pos.lat, lon: pos.lon, alt: pos.alt };
-  }).filter(Boolean);
-
-  log('ok', `Satellites ready: ${result.length} tracked`);
-  document.getElementById('ct-sats').textContent = result.length;
-  document.getElementById('sb-flights').textContent =
-    (liveFlights.length || 0) + ' ac / ' + result.length + ' sat';
-  return result;
-}
-
-/* ══════════════════════════════════════════
-   RENDER — SATELLITES on Leaflet
-══════════════════════════════════════════ */
-function renderSatellites() {
-  satLayer.clearLayers();
-  if (!layers.sats || !activeSrcs.has('CELESTRAK')) return;
-
-  const now = new Date();
-  liveSats.forEach(s => {
-    // Satellite icon
-    const icon = L.divIcon({
-      className: '',
-      html: `<div style="font-size:15px;animation:sat-pulse 2s infinite;
-        filter:drop-shadow(0 0 4px ${s.color})" title="${s.name}">🛰️</div>`,
-      iconSize: [18, 18], iconAnchor: [9, 9],
-    });
-
-    const m = L.marker([s.lat, s.lon], { icon });
-    m.bindPopup(`
-      <b style="color:${s.color}">🛰️ ${s.name}</b><br>
-      <span style="color:#aaa;font-size:10px">
-        Group: ${s.group}<br>
-        Alt: ${s.alt} km &nbsp; (${Math.round(s.alt * 0.621)} mi)<br>
-        Lat: ${s.lat.toFixed(2)}° &nbsp; Lon: ${s.lon.toFixed(2)}°
-      </span>
-    `, { maxWidth: 200 });
-    m.addTo(satLayer);
-
-    // Orbital track — next 90 minutes
-    const segments = getOrbitTrack(s.satrec, 60, 1.5);
-    segments.forEach((seg, i) => {
-      L.polyline(seg, {
-        color: s.color,
-        weight: i === 0 ? 1.5 : 0.8,
-        opacity: i === 0 ? 0.7 : 0.3,
-        dashArray: '4 6',
-        interactive: false,
-      }).addTo(satLayer);
-    });
-  });
-}
-
-// Update satellite positions every 30 seconds using existing TLE data
-function updateSatPositions() {
-  if (!liveSats.length || !window.satellite) return;
-  const now = new Date();
-  liveSats = liveSats.map(s => {
-    const pos = propagateSat(s.satrec, now);
-    if (!pos) return s;
-    return { ...s, lat: pos.lat, lon: pos.lon, alt: pos.alt };
-  });
-  renderSatellites();
-}
-
-/* ══════════════════════════════════════════
    MAIN FETCH
 ══════════════════════════════════════════ */
 async function fetchAll(){
   setStatus('fetching');
   document.getElementById('lbar').style.display='block';
   log('warn','=== Starting full fetch ===');
-
-  const[rssR,flightR,alertR,stormR,satR]=await Promise.allSettled([
-    fetchRSS(),fetchFlights(),fetchNOAAAlerts(),fetchNOAAStorms(),fetchSatellites()
+  const[rssR,flightR,satR,alertR,stormR]=await Promise.allSettled([
+    fetchRSS(),fetchFlights(),fetchSatellites(),fetchNOAAAlerts(),fetchNOAAStorms()
   ]);
   fetchNOAAConditions();
 
   const raw=rssR.status==='fulfilled'?rssR.value:[];
   const seen=new Set();
-  allEvents=raw.filter(e=>{
-    const k=e.headline.toLowerCase().slice(0,55);
-    if(seen.has(k))return false;seen.add(k);return true;
-  }).sort((a,b)=>b.ts-a.ts);
-
+  allEvents=raw.filter(e=>{const k=e.headline.toLowerCase().slice(0,55);if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>b.ts-a.ts);
   liveFlights=flightR.status==='fulfilled'?flightR.value:[];
+  liveSats=satR.status==='fulfilled'?satR.value:[];
   wxAlerts=alertR.status==='fulfilled'?alertR.value:[];
   storms=stormR.status==='fulfilled'?stormR.value:[];
-  liveSats=satR.status==='fulfilled'?satR.value:[];
 
   document.getElementById('ct-news').textContent=allEvents.length;
   document.getElementById('ct-alerts').textContent=wxAlerts.length;
@@ -804,172 +752,173 @@ async function fetchAll(){
   document.getElementById('sb-noaa').textContent=wxAlerts.length+' alerts';
   document.getElementById('sb-ref').textContent=new Date().toLocaleTimeString();
   document.getElementById('lbar').style.display='none';
-
-  log('ok',`Done — ${allEvents.length} stories, ${liveFlights.length} flights, ${liveSats.length} sats, ${wxAlerts.length} wx`);
+  log('ok',`Done — ${allEvents.length} news, ${liveFlights.length} flights, ${liveSats.length} sats, ${wxAlerts.length} wx`);
   setStatus(allEvents.length||liveFlights.length||liveSats.length?'live':'err');
 
-  renderNewsMap();
-  renderFlights();
-  renderSatellites();
-  renderWeather();
-  renderList();
-  renderTicker();
+  renderNewsMap();renderFlights();renderSatellites();renderWeather();renderList();renderTicker();
 }
 
 /* ══════════════════════════════════════════
-   RENDER — NEWS on Leaflet
+   RENDER — NEWS CLUSTERS
 ══════════════════════════════════════════ */
 function renderNewsMap(){
-  newsLayer.clearLayers();
+  Object.values(newsEnts).forEach(e=>viewer.entities.remove(e));newsEnts={};
+  vehicleEnts.forEach(e=>viewer.entities.remove(e));vehicleEnts=[];
   if(!layers.news)return;
 
   const visible=getFiltered();
-  // Group by location
   const groups={};
   visible.forEach(ev=>{
     if(!ev.geo)return;
     const key=`${Math.round(ev.geo.lat*2)/2},${Math.round(ev.geo.lon*2)/2}`;
-    if(!groups[key])groups[key]=[];
-    groups[key].push(ev);
+    if(!groups[key])groups[key]=[];groups[key].push(ev);
   });
 
   Object.entries(groups).forEach(([key,evs])=>{
     const lead=evs.sort((a,b)=>b.sev-a.sev)[0];
     const col=SEV_COLOR[lead.cat]||'#00ff9d';
-    const radius=40000+lead.sev*25000+(evs.length-1)*10000;
+    const cc=Cesium.Color.fromCssColorString(col);
+    const r=55000+lead.sev*28000+(evs.length-1)*12000;
     const sel=evs.some(e=>e.id===selectedId);
-
-    // Pulsing circle
-    const circle=L.circle([lead.geo.lat,lead.geo.lon],{
-      radius,
-      color:col,
-      fillColor:col,
-      fillOpacity:sel?0.28:0.1,
-      opacity:sel?0.9:0.5,
-      weight:sel?2:1,
+    newsEnts[key]=viewer.entities.add({
+      id:key,_evIds:evs.map(e=>e.id),
+      position:Cesium.Cartesian3.fromDegrees(lead.geo.lon,lead.geo.lat),
+      ellipse:{semiMajorAxis:r,semiMinorAxis:r,material:cc.withAlpha(sel?.3:.12),
+        outline:true,outlineColor:cc.withAlpha(sel?.9:.45),outlineWidth:sel?2:1,height:0},
+      point:{pixelSize:4+lead.sev*.7,color:cc,outlineColor:Cesium.Color.BLACK.withAlpha(.6),
+        outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY},
+      label:{text:`${CAT_ICONS[lead.cat]||'📰'} ${lead.geo.name.toUpperCase()}\n${evs.length} stor${evs.length>1?'ies':'y'}`,
+        font:'10px "Share Tech Mono"',fillColor:cc,outlineColor:Cesium.Color.BLACK,outlineWidth:2,
+        style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-22),
+        showBackground:true,backgroundColor:new Cesium.Color(.01,.03,.08,.88),
+        backgroundPadding:new Cesium.Cartesian2(5,3),
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,show:sel||evs.length>=2||lead.sev>=7},
     });
+  });
 
-    const popupHtml=`<b style="color:${col}">${CAT_ICONS[lead.cat]} ${lead.geo.name.toUpperCase()}</b><br>
-      <span style="color:#aaa;font-size:10px">${evs.length} stor${evs.length>1?'ies':'y'}</span><br><br>`+
-      evs.slice(0,3).map(e=>`<span style="color:${e.srcColor};font-size:9px">[${e.src}]</span> <span style="font-size:10px;color:#ddd">${esc(e.headline.slice(0,70))}</span>`).join('<br>');
-
-    circle.bindPopup(popupHtml,{maxWidth:280});
-    circle.on('click',()=>{
-      const top=evs[0];
-      selectedId=top.id===selectedId?null:top.id;
-      renderNewsMap();renderList();
+  visible.filter(e=>e.geo&&e.veh).sort((a,b)=>b.sev-a.sev).slice(0,50).forEach(ev=>{
+    const v=ev.veh;
+    const alt=v.icon==='✈️'?9000:v.icon==='🚁'?300:0;
+    const jLat=ev.geo.lat+(Math.random()-.5)*1.2;
+    const jLon=ev.geo.lon+(Math.random()-.5)*1.2;
+    const ent=viewer.entities.add({
+      id:'nv_'+ev.id,_evId:ev.id,
+      position:Cesium.Cartesian3.fromDegrees(jLon,jLat,alt),
+      billboard:{image:makePinCanvas(v.icon,v.color,ev.id===selectedId),
+        width:30,height:30,verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,
+        heightReference:alt>0?Cesium.HeightReference.NONE:Cesium.HeightReference.CLAMP_TO_GROUND},
+      label:{text:v.label,font:'9px "Share Tech Mono"',fillColor:Cesium.Color.fromCssColorString(v.color),
+        outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset:new Cesium.Cartesian2(0,-33),showBackground:true,
+        backgroundColor:new Cesium.Color(.01,.03,.08,.85),backgroundPadding:new Cesium.Cartesian2(4,2),
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,show:ev.id===selectedId},
     });
-    circle.addTo(newsLayer);
-
-    // Label marker for significant clusters
-    if(sel||evs.length>=2||lead.sev>=7){
-      const icon=L.divIcon({
-        className:'',
-        html:`<div style="
-          font-family:'Share Tech Mono',monospace;font-size:9px;
-          color:${col};background:rgba(2,6,14,.88);
-          border:1px solid ${col}55;border-radius:2px;
-          padding:2px 5px;white-space:nowrap;pointer-events:none;
-          text-shadow:0 0 6px ${col}88">
-          ${CAT_ICONS[lead.cat]} ${lead.geo.name.toUpperCase()}
-        </div>`,
-        iconAnchor:[0,20],
-      });
-      L.marker([lead.geo.lat,lead.geo.lon],{icon,interactive:false}).addTo(newsLayer);
-    }
-
-    // Vehicle icon
-    if(lead.veh){
-      const jLat=lead.geo.lat+(Math.random()-.5)*1;
-      const jLon=lead.geo.lon+(Math.random()-.5)*1;
-      const vIcon=L.divIcon({
-        className:'',
-        html:`<div style="font-size:18px;filter:drop-shadow(0 0 4px ${lead.veh.color})" title="${lead.veh.label}">${lead.veh.icon}</div>`,
-        iconSize:[24,24],iconAnchor:[12,12],
-      });
-      const vm=L.marker([jLat,jLon],{icon:vIcon});
-      vm.bindPopup(`<b>${lead.veh.icon} ${lead.veh.label}</b><br><span style="color:#aaa;font-size:10px">${esc(lead.headline.slice(0,80))}</span>`);
-      vm.addTo(newsLayer);
-    }
+    vehicleEnts.push(ent);
   });
 }
 
 /* ══════════════════════════════════════════
-   RENDER — LIVE FLIGHTS on Leaflet
+   RENDER — LIVE FLIGHTS
 ══════════════════════════════════════════ */
 function renderFlights(){
-  flightLayer.clearLayers();
+  flightEnts.forEach(e=>viewer.entities.remove(e));flightEnts=[];
   if(!layers.flights||!activeSrcs.has('OPENSKY'))return;
-
   liveFlights.forEach(f=>{
-    const icon=L.divIcon({
-      className:'',
-      html:`<div style="font-size:14px;transform:rotate(${f.heading?parseInt(f.heading):0}deg);
-        filter:drop-shadow(0 0 3px #b06fff);opacity:0.85" title="${f.callsign}">✈️</div>`,
-      iconSize:[16,16],iconAnchor:[8,8],
-    });
-    const m=L.marker([f.lat,f.lon],{icon});
-    m.bindPopup(`
-      <b style="color:#b06fff">✈️ ${f.callsign||f.icao}</b><br>
-      <span style="color:#aaa;font-size:10px">
-        ${f.country}<br>
-        Alt: ${f.alt?f.alt+'ft':'–'} &nbsp; Speed: ${f.speed||'–'} &nbsp; Hdg: ${f.heading||'–'}<br>
-        ${f.lat.toFixed(3)}°, ${f.lon.toFixed(3)}°
-      </span>
-    `,{maxWidth:200});
-    m.addTo(flightLayer);
+    const altM=Math.max((f.alt||0)/3.281,100);
+    flightEnts.push(viewer.entities.add({
+      id:'fl_'+f.icao+'_'+uid(),_flight:f,_isFlight:true,
+      position:Cesium.Cartesian3.fromDegrees(f.lon,f.lat,altM),
+      billboard:{image:makePinCanvas('✈️','#b06fff',false),
+        width:18,height:18,verticalOrigin:Cesium.VerticalOrigin.CENTER,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,heightReference:Cesium.HeightReference.NONE},
+    }));
   });
 }
 
 /* ══════════════════════════════════════════
-   RENDER — NOAA WEATHER on Leaflet
+   RENDER — SATELLITES + ORBITAL TRACKS
+══════════════════════════════════════════ */
+function renderSatellites(){
+  satEnts.forEach(e=>viewer.entities.remove(e));satEnts=[];
+  if(!layers.sats||!activeSrcs.has('CELESTRAK'))return;
+
+  liveSats.forEach(s=>{
+    const altM=(s.alt||400)*1000; // km to m
+
+    // Satellite icon
+    satEnts.push(viewer.entities.add({
+      id:'sat_'+uid(),_sat:s,_isSat:true,
+      position:Cesium.Cartesian3.fromDegrees(s.lon,s.lat,altM),
+      billboard:{image:makePinCanvas('🛰️',s.color,false),
+        width:20,height:20,verticalOrigin:Cesium.VerticalOrigin.CENTER,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,heightReference:Cesium.HeightReference.NONE},
+    }));
+
+    // Orbital track polyline
+    const segs=getOrbitTrack(s.satrec,60,1.5);
+    segs.forEach((seg,i)=>{
+      if(seg.length<2)return;
+      const positions=seg.map(p=>Cesium.Cartesian3.fromDegrees(p[1],p[0],altM));
+      satEnts.push(viewer.entities.add({
+        polyline:{
+          positions,
+          width:i===0?1.5:0.8,
+          material:new Cesium.PolylineDashMaterialProperty({
+            color:Cesium.Color.fromCssColorString(s.color).withAlpha(i===0?.6:.25),
+            dashLength:12,
+          }),
+          clampToGround:false,
+        },
+      }));
+    });
+  });
+}
+
+/* ══════════════════════════════════════════
+   RENDER — NOAA WEATHER
 ══════════════════════════════════════════ */
 function renderWeather(){
-  weatherLayer.clearLayers();
-  stormLayer.clearLayers();
+  weatherEnts.forEach(e=>viewer.entities.remove(e));weatherEnts=[];
 
   if(layers.weather&&activeSrcs.has('NOAA')){
     wxAlerts.forEach(a=>{
       if(!a.lat||!a.lon)return;
       const sev=a.severity==='Extreme'?10:a.severity==='Severe'?8:a.severity==='Moderate'?6:4;
-      const col=sev>=8?'#ff3b3b':'#ffc000';
-      const circle=L.circle([a.lat,a.lon],{
-        radius:70000+sev*12000,
-        color:col,fillColor:col,fillOpacity:.15,opacity:.6,weight:1,
-      });
-      circle.bindPopup(`<b style="color:${col}">⚠️ ${a.event}</b><br>
-        <span style="color:#aaa;font-size:10px">${a.area}<br>Severity: ${a.severity}</span>`);
-      circle.addTo(weatherLayer);
-
-      const icon=L.divIcon({
-        className:'',
-        html:`<div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:${col};
-          background:rgba(2,6,14,.88);border:1px solid ${col}55;border-radius:2px;
-          padding:2px 5px;white-space:nowrap;pointer-events:none">⚠️ ${a.event.slice(0,20)}</div>`,
-        iconAnchor:[0,12],
-      });
-      L.marker([a.lat,a.lon],{icon,interactive:false}).addTo(weatherLayer);
+      const col=Cesium.Color.fromCssColorString(sev>=8?'#ff3b3b':'#ffc000');
+      weatherEnts.push(viewer.entities.add({
+        id:'wa_'+a.id,_alert:a,_isAlert:true,
+        position:Cesium.Cartesian3.fromDegrees(a.lon,a.lat),
+        ellipse:{semiMajorAxis:80000+sev*15000,semiMinorAxis:80000+sev*15000,
+          material:col.withAlpha(.18),outline:true,outlineColor:col.withAlpha(.6),outlineWidth:1,height:0},
+        point:{pixelSize:7,color:col,outlineColor:Cesium.Color.BLACK.withAlpha(.5),
+          outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY},
+        label:{text:`⚠️ ${(a.event||'').slice(0,22)}`,font:'9px "Share Tech Mono"',fillColor:col,
+          outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+          pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,
+          backgroundColor:new Cesium.Color(.05,.02,.02,.9),backgroundPadding:new Cesium.Cartesian2(4,2),
+          disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true},
+      }));
     });
   }
 
   if(layers.storms&&activeSrcs.has('NOAA')){
     storms.forEach(s=>{
       if(!s.lat||!s.lon)return;
-      const circle=L.circle([s.lat,s.lon],{
-        radius:300000,
-        color:'#ff6600',fillColor:'#ff6600',fillOpacity:.12,opacity:.7,weight:2,
-        dashArray:'6,4',
-      });
-      circle.bindPopup(`<b style="color:#ff6600">🌀 ${s.title}</b><br>
-        <span style="color:#aaa;font-size:10px">${s.desc.slice(0,120)}</span>`);
-      circle.addTo(stormLayer);
-
-      const icon=L.divIcon({
-        className:'',
-        html:`<div style="font-size:22px;animation:spin 4s linear infinite;display:inline-block">🌀</div>`,
-        iconSize:[28,28],iconAnchor:[14,14],
-      });
-      L.marker([s.lat,s.lon],{icon}).bindPopup(`<b style="color:#ff6600">🌀 ${s.title}</b>`).addTo(stormLayer);
+      const col=Cesium.Color.fromCssColorString('#ff6600');
+      weatherEnts.push(viewer.entities.add({
+        id:'st_'+s.id,_storm:s,_isStorm:true,
+        position:Cesium.Cartesian3.fromDegrees(s.lon,s.lat),
+        ellipse:{semiMajorAxis:350000,semiMinorAxis:350000,
+          material:col.withAlpha(.15),outline:true,outlineColor:col.withAlpha(.75),outlineWidth:2,height:0},
+        point:{pixelSize:11,color:col,outlineColor:Cesium.Color.WHITE.withAlpha(.4),
+          outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY},
+        label:{text:`🌀 ${s.title.slice(0,28)}`,font:'10px "Share Tech Mono"',fillColor:col,
+          outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+          pixelOffset:new Cesium.Cartesian2(0,-22),showBackground:true,
+          backgroundColor:new Cesium.Color(.05,.02,.0,.92),backgroundPadding:new Cesium.Cartesian2(5,3),
+          disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true},
+      }));
     });
   }
 }
@@ -982,11 +931,8 @@ function renderList(){
   const list=document.getElementById('event-list');
   const empty=document.getElementById('empty');
   if(!filtered.length){
-    list.innerHTML='';
-    empty.style.display='block';
-    empty.textContent=allEvents.length
-      ?`No results for "${searchQ||'current filters'}" — try adjusting filters.`
-      :'⟳ Fetching feeds… open ▶ DEBUG LOG to see status.';
+    list.innerHTML='';empty.style.display='block';
+    empty.textContent=allEvents.length?`No results for "${searchQ||'current filters'}" — try adjusting filters.`:'⟳ Fetching feeds… open ▶ DEBUG LOG to see status.';
     return;
   }
   empty.style.display='none';
@@ -1024,6 +970,13 @@ function renderTicker(){
         <div class="t-hl">${esc(ev.headline)}</div>
         <div class="t-meta">${new Date(ev.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'})}${ev.geo?' · 📍'+ev.geo.name:''}</div>
       </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">Fetching…</div>';
+  }else if(tickerTab==='flights'){
+    el.innerHTML=liveFlights.slice(0,80).map(f=>
+      `<div class="tick">
+        <div class="t-src" style="color:#b06fff">✈️ ${f.callsign||f.icao}</div>
+        <div class="t-hl">${f.country} · ${f.alt?f.alt+'ft':''} ${f.speed||''} ${f.heading||''}</div>
+        <div class="t-meta">${f.lat.toFixed(2)}°, ${f.lon.toFixed(2)}°</div>
+      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No flight data — OpenSky may be rate limited</div>';
   }else if(tickerTab==='sats'){
     el.innerHTML=liveSats.slice(0,80).map(s=>
       `<div class="tick">
@@ -1031,13 +984,6 @@ function renderTicker(){
         <div class="t-hl">${esc(s.name)}</div>
         <div class="t-meta">Alt: ${s.alt}km · ${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°</div>
       </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No satellite data</div>';
-  }else if(tickerTab==='flights'){
-    el.innerHTML=liveFlights.slice(0,80).map(f=>
-      `<div class="tick">
-        <div class="t-src" style="color:#b06fff">✈️ ${f.callsign||f.icao}</div>
-        <div class="t-hl">${f.country} · ${f.alt?f.alt+'ft':''} ${f.speed||''} ${f.heading||''}</div>
-        <div class="t-meta">${f.lat.toFixed(2)}°, ${f.lon.toFixed(2)}°</div>
-      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No flight data — OpenSky may be rate limited. Try again in 60s.</div>';
   }else{
     const all=[
       ...wxAlerts.map(a=>({icon:'⚠️',color:'#ffc000',title:a.event,sub:a.area,sev:a.severity})),
@@ -1068,14 +1014,10 @@ function getFiltered(){
     if(ev.ts<cut)return false;
     if(!activeSrcs.has(ev.src))return false;
     if(!activeCats.has(ev.cat))return false;
-    if(q){
-      const hay=(ev.headline+' '+(ev.geo?.name||'')+' '+ev.srcLabel+' '+ev.cat+' '+(ev.text||'')).toLowerCase();
-      if(!hay.includes(q))return false;
-    }
+    if(q){const hay=(ev.headline+' '+(ev.geo?.name||'')+' '+ev.srcLabel+' '+ev.cat+' '+(ev.text||'')).toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
 }
-
 function detectGeo(text){
   const lower=text.toLowerCase();
   const sorted=Object.entries(GEO).sort((a,b)=>b[0].length-a[0].length);
@@ -1092,6 +1034,16 @@ function calcSev(text,cat){
   if(/hundreds|thousands|dozens/i.test(text))s+=1;
   return Math.min(s,10);
 }
+function makePinCanvas(icon,color,selected){
+  const s=selected?36:26,c=document.createElement('canvas');
+  c.width=s;c.height=s;
+  const ctx=c.getContext('2d');
+  ctx.beginPath();ctx.arc(s/2,s/2,s/2-1,0,Math.PI*2);
+  ctx.fillStyle=selected?'rgba(255,255,255,.2)':'rgba(0,0,0,.65)';ctx.fill();
+  ctx.strokeStyle=color;ctx.lineWidth=selected?2.5:1.5;ctx.stroke();
+  ctx.font=`${Math.round(s*.44)}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(icon,s/2,s/2+1);return c;
+}
 function setStatus(s){
   document.getElementById('status-dot').className='dot '+(s==='live'?'live':s==='fetching'?'fetching':'err');
   document.getElementById('status-txt').textContent=s.toUpperCase();
@@ -1100,17 +1052,16 @@ function uid(){return Math.random().toString(36).slice(2,10);}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 /* ══════════════════════════════════════════
-   SELECT EVENT — fly map to location
+   SELECT EVENT
 ══════════════════════════════════════════ */
 function selectEvent(id){
   const ev=allEvents.find(e=>e.id===id);if(!ev)return;
   selectedId=id===selectedId?null:id;
   if(selectedId&&ev.geo){
-    map.flyTo([ev.geo.lat,ev.geo.lon],5,{duration:1.2});
+    viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(ev.geo.lon,ev.geo.lat,2800000),duration:1.5});
+    vehicleEnts.forEach(e=>{e.label.show=e._evId===id;});
   }
-  if(selectedId&&ev.link){
-    setTimeout(()=>{if(confirm(`Open article?\n\n${ev.headline}\n\n${ev.srcLabel}`))window.open(ev.link,'_blank');},400);
-  }
+  if(selectedId&&ev.link){setTimeout(()=>{if(confirm(`Open article?\n\n${ev.headline}\n\n${ev.srcLabel}`))window.open(ev.link,'_blank');},500);}
   renderNewsMap();renderList();
 }
 
@@ -1120,11 +1071,10 @@ function selectEvent(id){
 function toggleLayer(name){
   layers[name]=!layers[name];
   document.getElementById('lyr-'+name).classList.toggle('off',!layers[name]);
-  if(name==='news')renderNewsMap();
+  if(name==='news'){renderNewsMap();renderList();}
   else if(name==='flights')renderFlights();
   else if(name==='sats')renderSatellites();
-  else if(name==='weather'||name==='storms')renderWeather();
-  renderList();
+  else renderWeather();
 }
 function toggleSrc(id){
   activeSrcs.has(id)?activeSrcs.delete(id):activeSrcs.add(id);
@@ -1150,9 +1100,43 @@ function runSearch(){
   setTimeout(()=>{btn.textContent='⌕ RUN';btn.style.borderColor='';btn.style.background='';},2000);
 }
 document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();});
-document.getElementById('date-range').addEventListener('change',e=>{
-  dayRange=parseInt(e.target.value);renderNewsMap();renderList();
-});
+document.getElementById('date-range').addEventListener('change',e=>{dayRange=parseInt(e.target.value);renderNewsMap();renderList();});
+
+/* ══════════════════════════════════════════
+   GLOBE HOVER + CLICK
+══════════════════════════════════════════ */
+const tip=document.getElementById('tooltip');
+viewer.screenSpaceEventHandler.setInputAction(click=>{
+  const p=viewer.scene.pick(click.position);
+  if(p?.id?._evId)selectEvent(p.id._evId);
+  else if(p?.id?._evIds?.length)selectEvent(allEvents.find(e=>e.id===p.id._evIds[0])?.id);
+},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+viewer.screenSpaceEventHandler.setInputAction(move=>{
+  const p=viewer.scene.pick(move.endPosition);
+  let html=null;
+  if(p?.id?._isFlight){
+    const f=p.id._flight;
+    html=`<strong>✈️ ${f.callsign||f.icao}</strong>${f.country}<br>Alt: ${f.alt?f.alt+'ft':'–'} · ${f.speed||'–'} · Hdg: ${f.heading||'–'}`;
+  }else if(p?.id?._isSat){
+    const s=p.id._sat;
+    html=`<strong>🛰️ ${s.name}</strong>Group: ${s.group}<br>Alt: ${s.alt}km · ${s.lat?.toFixed(2)}°, ${s.lon?.toFixed(2)}°`;
+  }else if(p?.id?._isAlert){
+    const a=p.id._alert;
+    html=`<strong>⚠️ ${a.event}</strong>${a.area}<br>Severity: ${a.severity}`;
+  }else if(p?.id?._isStorm){
+    const s=p.id._storm;
+    html=`<strong>🌀 ${s.title}</strong>${s.desc.slice(0,140)}`;
+  }else if(p?.id?._evId){
+    const ev=allEvents.find(e=>e.id===p.id._evId);
+    if(ev)html=`<strong>${ev.veh?.icon||''} ${ev.veh?.label||'Event'}</strong><span style="color:${ev.srcColor}">[${ev.src}]</span> ${esc(ev.headline.slice(0,90))}${ev.geo?`<br>📍 ${ev.geo.name}`:''}`;
+  }else if(p?.id?._evIds){
+    const evs=allEvents.filter(e=>p.id._evIds.includes(e.id)).slice(0,5);
+    if(evs.length)html=`<strong>📍 ${evs[0].geo?.name?.toUpperCase()||''} — ${evs.length} stories</strong>`+evs.map(e=>`<span style="color:${e.srcColor}">[${e.src}]</span> ${esc(e.headline.slice(0,55))}…`).join('<br>');
+  }
+  if(html){tip.innerHTML=html;tip.style.display='block';tip.style.left=(move.endPosition.x+14)+'px';tip.style.top=(move.endPosition.y-14)+'px';}
+  else tip.style.display='none';
+},Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
 /* ══════════════════════════════════════════
    CLOCK + BOOT
@@ -1164,12 +1148,10 @@ window.addEventListener('load',()=>{
   toggleDebug();
   fetchAll();
 });
-setInterval(fetchAll,10*60*1000);
-setInterval(()=>{fetchFlights().then(f=>{liveFlights=f;renderFlights();renderTicker();});},60*1000);
-// Update satellite positions every 30s from existing TLE data (no new fetch needed)
+setInterval(fetchAll, 10*60*1000);
+setInterval(()=>{fetchFlights().then(f=>{liveFlights=f;renderFlights();renderTicker();});}, 60*1000);
 setInterval(updateSatPositions, 30*1000);
-// Re-fetch TLEs every 2 hours
-setInterval(()=>{fetchSatellites().then(s=>{liveSats=s;renderSatellites();renderTicker();});},2*60*60*1000);
+setInterval(()=>{fetchSatellites().then(s=>{liveSats=s;renderSatellites();renderTicker();});}, 2*60*60*1000);
 </script>
 </body>
 </html>
