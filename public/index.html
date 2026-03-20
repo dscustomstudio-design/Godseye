@@ -19,7 +19,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
   font-family:'Share Tech Mono',monospace;color:var(--g);font-size:11px;}
 
 /* ── LEFT HUD ── */
-#hud{top:10px;left:10px;width:368px;max-height:calc(100vh - 44px);
+#hud{top:10px;left:10px;width:368px;max-height:calc(100vh - 110px);
   display:flex;flex-direction:column;overflow:hidden;z-index:100;
   transition:width .2s,max-height .2s;}
 
@@ -120,7 +120,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
 #empty{padding:18px 12px;color:rgba(0,255,157,.3);font-size:11px;line-height:1.7;}
 
 /* ── RIGHT TICKER ── */
-#ticker{top:10px;right:10px;width:262px;max-height:calc(100vh - 44px);
+#ticker{top:10px;right:10px;width:262px;max-height:calc(100vh - 110px);
   display:flex;flex-direction:column;overflow:hidden;z-index:100;transition:width .2s;}
 #ticker.collapsed{width:36px;}
 #ticker.collapsed #ticker-body{display:none;}
@@ -151,7 +151,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
 .tick .t-meta{font-size:8px;color:rgba(0,255,157,.28);margin-top:2px;}
 
 /* ── WEATHER PANEL ── */
-#wx-panel{bottom:32px;left:10px;width:228px;padding:8px 12px;font-size:9px;line-height:1.9;z-index:100;
+#wx-panel{bottom:62px;left:10px;width:228px;padding:8px 12px;font-size:9px;line-height:1.9;z-index:100;
   transition:left .2s;}
 #wx-panel .wx-title{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--a);letter-spacing:1px;margin-bottom:4px;}
 .wx-row{display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,200,255,.07);padding:1px 0;}
@@ -171,14 +171,14 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
 #tooltip strong{color:#fff;font-size:11px;display:block;margin-bottom:4px;}
 
 /* ── STATUS BAR ── */
-#statusbar{position:fixed;bottom:0;left:0;right:0;height:24px;background:rgba(1,5,12,.95);
-  border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:14px;
+#statusbar{position:fixed;bottom:32px;left:0;right:0;height:24px;background:rgba(1,5,12,.95);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:14px;
   font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.35);z-index:100;}
 #statusbar .val{color:var(--g);}
 #clock{margin-left:auto;color:var(--a);}
 
 /* ── LEGEND ── */
-#legend{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+#legend{position:fixed;bottom:62px;left:50%;transform:translateX(-50%);
   display:flex;gap:10px;align-items:center;padding:4px 12px;
   background:rgba(2,6,14,.92);border:1px solid var(--border);border-radius:3px;
   font-family:'Share Tech Mono',monospace;font-size:9px;
@@ -331,7 +331,7 @@ const PROXY = u => `/proxy?url=${encodeURIComponent(u)}`;
 /* ══════════════════════════════════════════
    CESIUM — dark CARTO tiles, no ion deps
 ══════════════════════════════════════════ */
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc4ZDkiLCJpZCI6NTc3MzMsImlhdCI6MTYyMzMxNzg3N30.EcK_1XusvHCBdHiMQFNnEItF1TxB8bvdPnFXmCr3EfI';
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjNmMwNDJjZS1mOGEwLTQwMGEtYmQ0MS04MGZkZjdmMDU1NzAiLCJpZCI6NDA2NDU3LCJpYXQiOjE3NzM5NzQ3NDJ9.MRK9GM6C2SDyTIW-n_kxvLztgnbAB4hKyLiJxCYa_fE';
 
 const viewer = new Cesium.Viewer('cesiumContainer', {
   imageryProvider: new Cesium.UrlTemplateImageryProvider({
@@ -340,19 +340,28 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     credit: '© OpenStreetMap contributors © CARTO',
     maximumLevel: 19,
   }),
+  terrainProvider: new Cesium.CesiumTerrainProvider({
+    url: Cesium.IonResource.fromAssetId(1),
+    requestVertexNormals: true,
+    requestWaterMask: true,
+  }),
   baseLayerPicker: false, navigationHelpButton: true,
   homeButton: true, geocoder: false, sceneModePicker: true,
-  timeline: false, animation: false, fullscreenButton: false,
+  timeline: true, animation: true, fullscreenButton: false,
   infoBox: false, selectionIndicator: false, shouldAnimate: true,
-  creditContainer: document.createElement('div'),
 });
+// Style the Cesium timeline bar to match dark theme
+const timelineEl = viewer.timeline.container;
+timelineEl.style.background = 'rgba(2,6,14,.95)';
+timelineEl.style.borderTop = '1px solid rgba(0,212,255,.18)';
 viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#020810');
-viewer.scene.globe.enableLighting = false;
-viewer.scene.globe.showGroundAtmosphere = false;
+viewer.scene.globe.enableLighting = true;
+viewer.scene.globe.showGroundAtmosphere = true;
+viewer.scene.globe.depthTestAgainstTerrain = false;
 viewer.scene.skyBox.show = true;
-viewer.scene.sun.show = false;
-viewer.scene.moon.show = false;
-viewer.scene.skyAtmosphere.show = false;
+viewer.scene.sun.show = true;
+viewer.scene.moon.show = true;
+viewer.scene.skyAtmosphere.show = true;
 viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(15, 20, 19000000), duration: 0 });
 
 /* ══════════════════════════════════════════
@@ -573,11 +582,11 @@ function parseFlights(json){
    FETCH SATELLITES (CelesTrak TLE)
 ══════════════════════════════════════════ */
 const CELESTRAK_SOURCES=[
-  {name:'ISS',      color:'#00ff9d',url:'https://celestrak.org/SOCRATES/query.php?CATNR=25544&FORMAT=TLE',limit:1},
-  {name:'Starlink', color:'#60a5fa',url:'https://celestrak.org/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle',limit:60},
-  {name:'Military', color:'#ff3b3b',url:'https://celestrak.org/SOCRATES/query.php?GROUP=military&FORMAT=TLE',limit:30},
-  {name:'Weather',  color:'#ffc000',url:'https://celestrak.org/SOCRATES/query.php?GROUP=weather&FORMAT=TLE',limit:20},
-  {name:'GPS',      color:'#a78bfa',url:'https://celestrak.org/SOCRATES/query.php?GROUP=gps-ops&FORMAT=TLE',limit:20},
+  {name:'ISS',      color:'#00ff9d', url:'https://celestrak.org/SOCRATES/query.php?CATNR=25544&FORMAT=TLE',    limit:1},
+  {name:'Starlink', color:'#60a5fa', url:'https://celestrak.org/SOCRATES/query.php?GROUP=starlink&FORMAT=TLE', limit:60},
+  {name:'Military', color:'#ff3b3b', url:'https://celestrak.org/SOCRATES/query.php?GROUP=military&FORMAT=TLE', limit:30},
+  {name:'Weather',  color:'#ffc000', url:'https://celestrak.org/SOCRATES/query.php?GROUP=weather&FORMAT=TLE',  limit:20},
+  {name:'GPS',      color:'#a78bfa', url:'https://celestrak.org/SOCRATES/query.php?GROUP=gps-ops&FORMAT=TLE',  limit:20},
 ];
 
 function parseTLE(txt,name,color,limit){
