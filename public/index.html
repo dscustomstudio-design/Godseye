@@ -1386,12 +1386,14 @@ function renderList(){
   const filtered=getFiltered();
   const list=document.getElementById('event-list');
   const empty=document.getElementById('empty');
+  if(!list)return;
   if(!filtered.length){
-    list.innerHTML='';empty.style.display='block';
-    empty.textContent=allEvents.length?`No results for "${searchQ||'current filters'}" — try adjusting filters.`:'⟳ Fetching feeds… open ▶ DEBUG LOG to see status.';
+    list.innerHTML='';
+    if(empty)empty.style.display='block';
+    if(empty)empty.textContent=allEvents.length?`No results for "${searchQ||'current filters'}" — try adjusting filters.`:'⟳ Fetching feeds… open ▶ DEBUG LOG to see status.';
     return;
   }
-  empty.style.display='none';
+  if(empty)empty.style.display='none';
   const maxSev=Math.max(...filtered.map(e=>e.sev),1);
   list.innerHTML=filtered.slice(0,150).map(ev=>{
     const cls=ev.sev>=8?'threat':ev.sev>=6?'warn':'';
@@ -1582,14 +1584,11 @@ function toggleCat(id){
 function runSearch(){
   searchQ=document.getElementById('search').value.trim();
   renderNewsMap();renderList();
-  const btn=document.getElementById('search-btn');
-  const n=getFiltered().length;
-  btn.textContent=`✓ ${n} found`;
-  btn.style.borderColor='var(--g)';btn.style.background='rgba(0,255,157,.2)';
-  setTimeout(()=>{btn.textContent='⌕ RUN';btn.style.borderColor='';btn.style.background='';},2000);
 }
-document.getElementById('search').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();});
-document.getElementById('date-range').addEventListener('change',e=>{dayRange=parseInt(e.target.value);renderNewsMap();renderList();});
+const srchEl=document.getElementById('search');
+if(srchEl)srchEl.addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();});
+const drEl=document.getElementById('date-range');
+if(drEl)drEl.addEventListener('change',e=>{dayRange=parseInt(e.target.value);renderNewsMap();renderList();});
 
 /* ══════════════════════════════════════════
    GLOBE HOVER + CLICK
