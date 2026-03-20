@@ -28,6 +28,7 @@ const ALLOWED = [
   'www.cisa.gov',              // CISA threat alerts
   'feodotracker.abuse.ch',     // Feodo botnet C2 tracker
   'abuse.ch',                  // abuse.ch feeds
+  'api.windy.com',             // Windy webcams API
 ];
 
 // ── PROXY  GET /proxy?url=<encoded-url>
