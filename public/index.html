@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>God's Eye V14</title>
+<title>God's Eye V15</title>
 <script src="https://cdn.jsdelivr.net/npm/cesium@1.105.0/Build/Cesium/Cesium.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/cesium@1.105.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@4.1.3/dist/satellite.min.js"></script>
@@ -177,8 +177,31 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
 #statusbar .val{color:var(--g);}
 #clock{margin-left:auto;color:var(--a);}
 
-/* ── LEGEND ── */
+/* ── MOBILE RESPONSIVE ── */
+@media(max-width:768px){
+  #hud{width:calc(100vw - 20px);max-height:55vh;top:auto;bottom:68px;left:10px;
+    border-radius:8px 8px 3px 3px;transform:translateY(0);transition:transform .25s;}
+  #hud.mobile-hidden{transform:translateY(calc(100% + 10px));}
+  #hud.collapsed{width:36px;bottom:68px;height:40px;max-height:40px;}
+  #ticker{width:calc(100vw - 20px);max-height:40vh;top:10px;right:10px;left:10px;}
+  #ticker.collapsed{width:36px;left:auto;}
+  #badge-wrap{top:auto;bottom:110px;left:50%;transform:translateX(-50%);}
+  #wx-panel{display:none;}
+  #legend{display:none;}
+  #mobile-toggle{display:flex;}
+}
+@media(min-width:769px){#mobile-toggle{display:none!important;}}
+#mobile-toggle{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid var(--border);border-radius:3px;
+  padding:5px 16px;font-family:'Share Tech Mono',monospace;font-size:10px;
+  color:var(--g);cursor:pointer;z-index:200;letter-spacing:1px;}
 #legend{position:fixed;bottom:68px;left:50%;transform:translateX(-50%);
+  display:flex;gap:10px;align-items:center;padding:4px 12px;
+  background:rgba(2,6,14,.92);border:1px solid var(--border);border-radius:3px;
+  font-family:'Share Tech Mono',monospace;font-size:9px;
+  color:rgba(0,255,157,.45);white-space:nowrap;z-index:100;}
+.leg{display:flex;align-items:center;gap:4px;}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
   display:flex;gap:10px;align-items:center;padding:4px 12px;
   background:rgba(2,6,14,.92);border:1px solid var(--border);border-radius:3px;
   font-family:'Share Tech Mono',monospace;font-size:9px;
@@ -189,13 +212,14 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
 </head>
 <body>
 <div id="cesiumContainer"></div>
+<div id="cesiumContainer"></div>
 
 <!-- LEFT HUD -->
 <div class="panel" id="hud">
   <div id="hud-top">
     <div>
       <div class="sys-title">⬡ GOD'S EYE</div>
-      <div class="sys-sub">LIVE GLOBAL INTEL — V14</div>
+      <div class="sys-sub">LIVE GLOBAL INTEL — V15</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
       <span id="status-txt" style="font-size:9px;color:rgba(0,255,157,.4)">INIT</span>
@@ -220,9 +244,13 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
     <div id="layer-bar">
       <button class="lyr-btn" id="lyr-news"    style="border-color:#00ff9d;color:#00ff9d" onclick="toggleLayer('news')">📰 NEWS</button>
       <button class="lyr-btn" id="lyr-flights" style="border-color:#b06fff;color:#b06fff" onclick="toggleLayer('flights')">✈️ FLIGHTS</button>
+      <button class="lyr-btn" id="lyr-ships"   style="border-color:#00d4ff;color:#00d4ff" onclick="toggleLayer('ships')">🚢 SHIPS</button>
       <button class="lyr-btn" id="lyr-sats"    style="border-color:#fbbf24;color:#fbbf24" onclick="toggleLayer('sats')">🛰️ SATS</button>
+      <button class="lyr-btn" id="lyr-quakes"  style="border-color:#ff8c00;color:#ff8c00" onclick="toggleLayer('quakes')">🌋 QUAKES</button>
+      <button class="lyr-btn" id="lyr-threat"  style="border-color:#ff3b3b;color:#ff3b3b" onclick="toggleLayer('threat')">☠️ THREAT</button>
       <button class="lyr-btn" id="lyr-weather" style="border-color:#ffc000;color:#ffc000" onclick="toggleLayer('weather')">🌩 ALERTS</button>
       <button class="lyr-btn" id="lyr-storms"  style="border-color:#ff6600;color:#ff6600" onclick="toggleLayer('storms')">🌀 STORMS</button>
+      <button class="lyr-btn" id="lyr-zones"   style="border-color:#ff00ff;color:#ff00ff" onclick="toggleLayer('zones')">⚠️ ZONES</button>
     </div>
 
     <div id="src-filters">
@@ -237,6 +265,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
       <button class="src-btn" data-src="NOAA"      style="border-color:#ffc000;background:#ffc00012" onclick="toggleSrc('NOAA')">NOAA</button>
       <button class="src-btn" data-src="OPENSKY"   style="border-color:#b06fff;background:#b06fff12" onclick="toggleSrc('OPENSKY')">OPENSKY</button>
       <button class="src-btn" data-src="CELESTRAK" style="border-color:#fbbf24;background:#fbbf2412" onclick="toggleSrc('CELESTRAK')">SATS</button>
+      <button class="src-btn" data-src="AISHUB"    style="border-color:#00d4ff;background:#00d4ff12" onclick="toggleSrc('AISHUB')">AIS</button>
+      <button class="src-btn" data-src="USGS"      style="border-color:#ff8c00;background:#ff8c0012" onclick="toggleSrc('USGS')">USGS</button>
+      <button class="src-btn" data-src="CISA"      style="border-color:#ff3b3b;background:#ff3b3b12" onclick="toggleSrc('CISA')">CISA</button>
     </div>
 
     <div id="cat-filters">
@@ -254,9 +285,17 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
     <div id="stats">
       <div>News: <span id="ct-news">0</span></div>
       <div>Flights: <span id="ct-flights">0</span></div>
+      <div>Ships: <span id="ct-ships">0</span></div>
       <div>Sats: <span id="ct-sats">0</span></div>
+      <div>Quakes: <span id="ct-quakes">0</span></div>
+      <div>Threats: <span id="ct-threats">0</span></div>
       <div>WX: <span id="ct-alerts">0</span></div>
-      <div>Storms: <span id="ct-storms">0</span></div>
+      <div>Zones: <span id="ct-zones">0</span></div>
+    </div>
+    <div style="padding:4px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:4px;align-items:center;">
+      <button id="zone-draw-btn" onclick="startZoneDraw()" style="padding:3px 8px;border-radius:2px;border:1px solid #ff00ff;background:rgba(255,0,255,.1);color:#ff00ff;font-family:inherit;font-size:9px;cursor:pointer;letter-spacing:1px;">⚠️ DRAW ZONE</button>
+      <button onclick="clearZones()" style="padding:3px 8px;border-radius:2px;border:1px solid rgba(255,0,255,.3);background:transparent;color:rgba(255,0,255,.5);font-family:inherit;font-size:9px;cursor:pointer;">CLEAR ALL</button>
+      <span id="zone-hint" style="font-size:9px;color:rgba(255,0,255,.5)">Click globe to place</span>
     </div>
 
     <button id="debug-toggle" onclick="toggleDebug()">▶ FEED DEBUG LOG</button>
@@ -274,7 +313,10 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
       <div id="ticker-tabs">
         <button class="ttab on" onclick="switchTab('news')">NEWS</button>
         <button class="ttab"    onclick="switchTab('flights')">FLIGHTS</button>
+        <button class="ttab"    onclick="switchTab('ships')">SHIPS</button>
         <button class="ttab"    onclick="switchTab('sats')">SATS</button>
+        <button class="ttab"    onclick="switchTab('quakes')">QUAKES</button>
+        <button class="ttab"    onclick="switchTab('threat')">THREAT</button>
         <button class="ttab"    onclick="switchTab('wx')">WX</button>
       </div>
       <button id="ticker-collapse-btn" onclick="toggleTicker()" title="Collapse ticker">▶</button>
@@ -300,32 +342,37 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
 <!-- TOOLTIP -->
 <div id="tooltip"></div>
 
-<!-- STATUS BAR -->
 <div id="statusbar">
   <span>SYS: <span class="val">ONLINE</span></span>
   <span>NEWS: <span class="val" id="sb-news">–</span></span>
   <span>FLIGHTS: <span class="val" id="sb-flights">–</span></span>
+  <span>SHIPS: <span class="val" id="sb-ships">–</span></span>
+  <span>QUAKES: <span class="val" id="sb-quakes">–</span></span>
+  <span>THREAT: <span class="val" id="sb-threat">–</span></span>
   <span>SATS: <span class="val" id="sb-sats">–</span></span>
   <span>NOAA: <span class="val" id="sb-noaa">–</span></span>
   <span>UPDATED: <span class="val" id="sb-ref">–</span></span>
   <span id="clock">──</span>
 </div>
 
-<!-- LEGEND -->
 <div id="legend">
   <div class="leg"><div class="leg-dot" style="background:#ff3b3b"></div>Conflict</div>
-  <div class="leg"><div class="leg-dot" style="background:#ffc000"></div>WX Alert</div>
+  <div class="leg"><div class="leg-dot" style="background:#ff3b3b;border:1px solid #f00"></div>Threat</div>
+  <div class="leg"><div class="leg-dot" style="background:#ffc000"></div>WX/Quake</div>
   <div class="leg"><div class="leg-dot" style="background:#ff6600"></div>Storm</div>
   <div class="leg"><div class="leg-dot" style="background:#b06fff"></div>Flight</div>
+  <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Ship</div>
   <div class="leg"><div class="leg-dot" style="background:#fbbf24"></div>Satellite</div>
-  <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Politics</div>
+  <div class="leg"><div class="leg-dot" style="background:#ff00ff"></div>Alert Zone</div>
   <div class="leg"><div class="leg-dot" style="background:#00ff9d"></div>General</div>
 </div>
 
+<!-- MOBILE TOGGLE -->
+<button id="mobile-toggle" onclick="document.getElementById('hud').classList.toggle('mobile-hidden')">
+  ⬡ INTEL
+</button>
+
 <script>
-/* ══════════════════════════════════════════
-   PROXY — Render Express server
-══════════════════════════════════════════ */
 const PROXY = u => `/proxy?url=${encodeURIComponent(u)}`;
 
 /* ══════════════════════════════════════════
@@ -460,11 +507,13 @@ function assignVehicle(cat,geo){
    STATE
 ══════════════════════════════════════════ */
 let allEvents=[],liveFlights=[],liveSats=[],wxAlerts=[],storms=[];
-let newsEnts={},vehicleEnts=[],flightEnts=[],satEnts=[],weatherEnts=[];
-let activeSrcs=new Set([...RSS_FEEDS.map(s=>s.id),'NOAA','OPENSKY','CELESTRAK']);
+let liveShips=[],quakes=[],threats=[],alertZones=[];
+let newsEnts={},vehicleEnts=[],flightEnts=[],satEnts=[],weatherEnts=[],shipEnts=[],quakeEnts=[],threatEnts=[],zoneEnts=[];
+let activeSrcs=new Set([...RSS_FEEDS.map(s=>s.id),'NOAA','OPENSKY','CELESTRAK','AISHUB','USGS','CISA']);
 let activeCats=new Set(Object.keys(CAT_RX).concat(['general']));
-let layers={news:true,flights:true,sats:true,weather:true,storms:true};
+let layers={news:true,flights:true,ships:true,sats:true,quakes:true,threat:true,weather:true,storms:true,zones:true};
 let searchQ='',dayRange=30,selectedId=null,tickerTab='news';
+let zoneDrawMode=false;
 
 /* ══════════════════════════════════════════
    DEBUG
@@ -727,14 +776,271 @@ async function fetchNOAAConditions(){
 }
 
 /* ══════════════════════════════════════════
+   FETCH SHIPS — AISHub (free, no key)
+══════════════════════════════════════════ */
+async function fetchShips(){
+  try{
+    log('warn','Fetching AIS ship data…');
+    // AISHub free JSON endpoint — no key needed, returns last 5min positions
+    const url='https://data.aishub.net/ws.php?username=0&format=1&output=json&compress=0&latmin=-70&latmax=75&lonmin=-180&lonmax=180';
+    const res=await fetch(PROXY(url),{signal:AbortSignal.timeout(18000)});
+    if(!res.ok){log('fail',`AISHub: HTTP ${res.status}`);return[];}
+    const json=await res.json();
+    // AISHub returns [[header],[data...]] format
+    if(!json||!json[1]){log('fail','AISHub: no data array');return[];}
+    const ships=json[1].filter(s=>s.LATITUDE&&s.LONGITUDE).slice(0,400).map(s=>({
+      mmsi:s.MMSI||'',
+      name:(s.NAME||'Unknown').trim(),
+      lat:parseFloat(s.LATITUDE),
+      lon:parseFloat(s.LONGITUDE),
+      speed:s.SOG?parseFloat(s.SOG).toFixed(1)+'kn':null,
+      heading:s.COG?Math.round(s.COG)+'°':null,
+      type:s.SHIPTYPE||0,
+      dest:(s.DESTINATION||'').trim(),
+      flag:s.FLAG||'',
+    }));
+    log('ok',`AISHub: ${ships.length} vessels`);
+    document.getElementById('sb-ships').textContent=ships.length+' vessels';
+    document.getElementById('ct-ships').textContent=ships.length;
+    return ships;
+  }catch(e){
+    log('fail','AISHub: '+e.message);
+    document.getElementById('sb-ships').textContent='ERR';
+    return[];
+  }
+}
+
+/* ══════════════════════════════════════════
+   FETCH EARTHQUAKES — USGS GeoJSON (free)
+══════════════════════════════════════════ */
+async function fetchQuakes(){
+  try{
+    log('warn','Fetching USGS earthquakes…');
+    // M2.5+ past 24 hours — reliable, no key
+    const url='https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson';
+    const res=await fetch(PROXY(url),{signal:AbortSignal.timeout(14000)});
+    if(!res.ok){log('fail',`USGS: HTTP ${res.status}`);return[];}
+    const json=await res.json();
+    if(!json.features){log('fail','USGS: no features');return[];}
+    const quakes=json.features.map(f=>{
+      const p=f.properties;
+      const [lon,lat,depth]=f.geometry.coordinates;
+      return{
+        id:'q_'+f.id,
+        place:p.place||'Unknown location',
+        mag:p.mag||0,
+        lat,lon,depth:Math.round(depth||0),
+        time:new Date(p.time).toLocaleTimeString(),
+        url:p.url||'',
+      };
+    }).filter(q=>q.lat&&q.lon);
+    log('ok',`USGS: ${quakes.length} earthquakes`);
+    document.getElementById('sb-quakes').textContent=quakes.length+' events';
+    document.getElementById('ct-quakes').textContent=quakes.length;
+    return quakes;
+  }catch(e){log('fail','USGS: '+e.message);return[];}
+}
+
+/* ══════════════════════════════════════════
+   FETCH THREAT INTEL — CISA Alerts + Feodo
+══════════════════════════════════════════ */
+async function fetchThreats(){
+  const all=[];
+  // CISA Alerts RSS
+  try{
+    log('warn','Fetching CISA alerts…');
+    const res=await fetch(PROXY('https://www.cisa.gov/uscert/ncas/alerts.xml'),{signal:AbortSignal.timeout(14000)});
+    if(res.ok){
+      const txt=await res.text();
+      const doc=new DOMParser().parseFromString(txt,'text/xml');
+      [...doc.querySelectorAll('item')].slice(0,20).forEach(el=>{
+        const title=el.querySelector('title')?.textContent||'';
+        const link=el.querySelector('link')?.textContent||'';
+        const desc=(el.querySelector('description')?.textContent||'').replace(/<[^>]+>/g,'').slice(0,200);
+        if(title)all.push({id:'cisa_'+uid(),src:'CISA',title,desc,link,lat:38.9,lon:-77.0,type:'advisory'});
+      });
+      log('ok',`CISA: ${all.filter(t=>t.src==='CISA').length} alerts`);
+    }
+  }catch(e){log('fail','CISA: '+e.message);}
+
+  // Feodo Tracker — botnet C2 IPs (free CSV)
+  try{
+    log('warn','Fetching Feodo botnet tracker…');
+    const res=await fetch(PROXY('https://feodotracker.abuse.ch/downloads/ipblocklist_recommended.json'),{signal:AbortSignal.timeout(14000)});
+    if(res.ok){
+      const json=await res.json();
+      const entries=(json||[]).slice(0,30);
+      // Map to known geo from country code approximations
+      const CC_GEO={'RU':[55.75,37.62],'CN':[39.91,116.39],'US':[38.90,-77.04],'DE':[52.52,13.40],
+        'NL':[52.37,4.90],'BR':[-15.78,-47.93],'UA':[50.45,30.52],'FR':[48.85,2.35],
+        'GB':[51.51,-0.13],'KR':[37.55,126.99],'JP':[35.68,139.69],'IN':[28.61,77.21]};
+      entries.forEach(e=>{
+        const cc=e.country||'US';
+        const geo=CC_GEO[cc]||[0,0];
+        all.push({id:'feodo_'+uid(),src:'FEODO',title:`C2 Server: ${e.ip_address||'?'}`,
+          desc:`Malware: ${e.malware||'Unknown'} · Port: ${e.port||'?'} · Country: ${cc}`,
+          lat:geo[0]+(Math.random()-.5)*4,lon:geo[1]+(Math.random()-.5)*4,type:'c2',
+          link:'https://feodotracker.abuse.ch/'});
+      });
+      log('ok',`Feodo: ${entries.length} C2 nodes`);
+    }
+  }catch(e){log('fail','Feodo: '+e.message);}
+
+  document.getElementById('sb-threat').textContent=all.length+' indicators';
+  document.getElementById('ct-threats').textContent=all.length;
+  return all;
+}
+
+/* ══════════════════════════════════════════
+   ALERT ZONES — draw on globe, save locally
+══════════════════════════════════════════ */
+function loadZones(){
+  try{const z=localStorage.getItem('godseye_zones');return z?JSON.parse(z):[];}catch(e){return[];}
+}
+function saveZones(){
+  try{localStorage.setItem('godseye_zones',JSON.stringify(alertZones));}catch(e){}
+}
+function startZoneDraw(){
+  zoneDrawMode=!zoneDrawMode;
+  const btn=document.getElementById('zone-draw-btn');
+  const hint=document.getElementById('zone-hint');
+  if(zoneDrawMode){
+    btn.style.background='rgba(255,0,255,.3)';btn.style.borderColor='#ff00ff';
+    btn.textContent='⚠️ CANCEL DRAW';
+    hint.textContent='Click globe to place alert zone';hint.style.color='#ff00ff';
+  }else{
+    btn.style.background='rgba(255,0,255,.1)';
+    btn.textContent='⚠️ DRAW ZONE';
+    hint.textContent='Click globe to place';hint.style.color='rgba(255,0,255,.5)';
+  }
+}
+function clearZones(){
+  alertZones=[];saveZones();renderZones();
+  document.getElementById('ct-zones').textContent=0;
+}
+function addZone(lat,lon){
+  const label=prompt('Zone label (optional):','Alert Zone '+(alertZones.length+1));
+  if(label===null)return;
+  alertZones.push({id:'zone_'+uid(),lat,lon,radius:500000,label:label||'Alert Zone',ts:Date.now()});
+  saveZones();
+  document.getElementById('ct-zones').textContent=alertZones.length;
+  renderZones();
+  startZoneDraw(); // exit draw mode
+}
+
+/* ══════════════════════════════════════════
+   RENDER — SHIPS
+══════════════════════════════════════════ */
+function renderShips(){
+  shipEnts.forEach(e=>viewer.entities.remove(e));shipEnts=[];
+  if(!layers.ships||!activeSrcs.has('AISHUB'))return;
+  liveShips.forEach(s=>{
+    const icon=s.type>=70&&s.type<=79?'🚢':s.type>=80&&s.type<=89?'🛢️':s.type>=60&&s.type<=69?'🚢':'🚤';
+    shipEnts.push(viewer.entities.add({
+      id:'sh_'+s.mmsi+'_'+uid(),_ship:s,_isShip:true,
+      position:Cesium.Cartesian3.fromDegrees(s.lon,s.lat,0),
+      billboard:{image:makePinCanvas(icon,'#00d4ff',false),
+        width:18,height:18,verticalOrigin:Cesium.VerticalOrigin.CENTER,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,
+        heightReference:Cesium.HeightReference.CLAMP_TO_GROUND},
+    }));
+  });
+}
+
+/* ══════════════════════════════════════════
+   RENDER — EARTHQUAKES
+══════════════════════════════════════════ */
+function renderQuakes(){
+  quakeEnts.forEach(e=>viewer.entities.remove(e));quakeEnts=[];
+  if(!layers.quakes||!activeSrcs.has('USGS'))return;
+  quakes.forEach(q=>{
+    const mag=q.mag||0;
+    const col=mag>=6?'#ff3b3b':mag>=5?'#ff8c00':mag>=4?'#ffc000':'#ffdd44';
+    const cc=Cesium.Color.fromCssColorString(col);
+    const r=40000+mag*55000;
+    quakeEnts.push(viewer.entities.add({
+      id:q.id,_quake:q,_isQuake:true,
+      position:Cesium.Cartesian3.fromDegrees(q.lon,q.lat),
+      ellipse:{semiMajorAxis:r,semiMinorAxis:r,
+        material:cc.withAlpha(.2),outline:true,
+        outlineColor:cc.withAlpha(.7),outlineWidth:1,height:0},
+      point:{pixelSize:4+mag*1.5,color:cc,
+        outlineColor:Cesium.Color.BLACK.withAlpha(.5),
+        outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY},
+      label:{text:`M${mag.toFixed(1)}`,font:'9px "Share Tech Mono"',
+        fillColor:cc,outlineColor:Cesium.Color.BLACK,outlineWidth:2,
+        style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset:new Cesium.Cartesian2(0,-16),
+        showBackground:true,backgroundColor:new Cesium.Color(.02,.01,.0,.9),
+        backgroundPadding:new Cesium.Cartesian2(4,2),
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,show:mag>=4},
+    }));
+  });
+}
+
+/* ══════════════════════════════════════════
+   RENDER — THREAT INTEL
+══════════════════════════════════════════ */
+function renderThreats(){
+  threatEnts.forEach(e=>viewer.entities.remove(e));threatEnts=[];
+  if(!layers.threat||!activeSrcs.has('CISA'))return;
+  threats.forEach(t=>{
+    const col=t.type==='c2'?'#ff3b3b':'#ff6600';
+    const cc=Cesium.Color.fromCssColorString(col);
+    threatEnts.push(viewer.entities.add({
+      id:t.id,_threat:t,_isThreat:true,
+      position:Cesium.Cartesian3.fromDegrees(t.lon,t.lat),
+      point:{pixelSize:7,color:cc,
+        outlineColor:Cesium.Color.BLACK.withAlpha(.6),outlineWidth:1,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY},
+      label:{text:t.type==='c2'?'☠ C2':' CISA',
+        font:'9px "Share Tech Mono"',fillColor:cc,
+        outlineColor:Cesium.Color.BLACK,outlineWidth:2,
+        style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset:new Cesium.Cartesian2(0,-14),
+        showBackground:true,backgroundColor:new Cesium.Color(.08,.0,.0,.9),
+        backgroundPadding:new Cesium.Cartesian2(4,2),
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true},
+    }));
+  });
+}
+
+/* ══════════════════════════════════════════
+   RENDER — ALERT ZONES
+══════════════════════════════════════════ */
+function renderZones(){
+  zoneEnts.forEach(e=>viewer.entities.remove(e));zoneEnts=[];
+  if(!layers.zones)return;
+  alertZones.forEach(z=>{
+    const cc=Cesium.Color.fromCssColorString('#ff00ff');
+    zoneEnts.push(viewer.entities.add({
+      id:z.id,_zone:z,_isZone:true,
+      position:Cesium.Cartesian3.fromDegrees(z.lon,z.lat),
+      ellipse:{semiMajorAxis:z.radius,semiMinorAxis:z.radius,
+        material:cc.withAlpha(.08),outline:true,
+        outlineColor:cc.withAlpha(.6),outlineWidth:2,height:0},
+      point:{pixelSize:8,color:cc,outlineColor:Cesium.Color.BLACK.withAlpha(.5),
+        outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY},
+      label:{text:`⚠️ ${z.label}`,font:'10px "Share Tech Mono"',
+        fillColor:cc,outlineColor:Cesium.Color.BLACK,outlineWidth:2,
+        style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset:new Cesium.Cartesian2(0,-20),
+        showBackground:true,backgroundColor:new Cesium.Color(.05,.0,.05,.92),
+        backgroundPadding:new Cesium.Cartesian2(5,3),
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true},
+    }));
+  });
+}
+
+/* ══════════════════════════════════════════
    MAIN FETCH
 ══════════════════════════════════════════ */
 async function fetchAll(){
   setStatus('fetching');
   document.getElementById('lbar').style.display='block';
   log('warn','=== Starting full fetch ===');
-  const[rssR,flightR,satR,alertR,stormR]=await Promise.allSettled([
-    fetchRSS(),fetchFlights(),fetchSatellites(),fetchNOAAAlerts(),fetchNOAAStorms()
+  const[rssR,flightR,shipR,satR,quakeR,threatR,alertR,stormR]=await Promise.allSettled([
+    fetchRSS(),fetchFlights(),fetchShips(),fetchSatellites(),fetchQuakes(),fetchThreats(),fetchNOAAAlerts(),fetchNOAAStorms()
   ]);
   fetchNOAAConditions();
 
@@ -742,20 +1048,23 @@ async function fetchAll(){
   const seen=new Set();
   allEvents=raw.filter(e=>{const k=e.headline.toLowerCase().slice(0,55);if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>b.ts-a.ts);
   liveFlights=flightR.status==='fulfilled'?flightR.value:[];
+  liveShips=shipR.status==='fulfilled'?shipR.value:[];
   liveSats=satR.status==='fulfilled'?satR.value:[];
+  quakes=quakeR.status==='fulfilled'?quakeR.value:[];
+  threats=threatR.status==='fulfilled'?threatR.value:[];
   wxAlerts=alertR.status==='fulfilled'?alertR.value:[];
   storms=stormR.status==='fulfilled'?stormR.value:[];
 
   document.getElementById('ct-news').textContent=allEvents.length;
   document.getElementById('ct-alerts').textContent=wxAlerts.length;
-  document.getElementById('ct-storms').textContent=storms.length;
+  document.getElementById('ct-storms').textContent=wxAlerts.length;
   document.getElementById('sb-noaa').textContent=wxAlerts.length+' alerts';
   document.getElementById('sb-ref').textContent=new Date().toLocaleTimeString();
   document.getElementById('lbar').style.display='none';
-  log('ok',`Done — ${allEvents.length} news, ${liveFlights.length} flights, ${liveSats.length} sats, ${wxAlerts.length} wx`);
+  log('ok',`Done — ${allEvents.length} news, ${liveFlights.length} flights, ${liveShips.length} ships, ${liveSats.length} sats, ${quakes.length} quakes, ${threats.length} threats`);
   setStatus(allEvents.length||liveFlights.length||liveSats.length?'live':'err');
 
-  renderNewsMap();renderFlights();renderSatellites();renderWeather();renderList();renderTicker();
+  renderNewsMap();renderFlights();renderShips();renderSatellites();renderQuakes();renderThreats();renderZones();renderWeather();renderList();renderTicker();
 }
 
 /* ══════════════════════════════════════════
@@ -977,6 +1286,27 @@ function renderTicker(){
         <div class="t-hl">${f.country} · ${f.alt?f.alt+'ft':''} ${f.speed||''} ${f.heading||''}</div>
         <div class="t-meta">${f.lat.toFixed(2)}°, ${f.lon.toFixed(2)}°</div>
       </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No flight data — OpenSky may be rate limited</div>';
+  }else if(tickerTab==='ships'){
+    el.innerHTML=liveShips.slice(0,80).map(s=>
+      `<div class="tick">
+        <div class="t-src" style="color:#00d4ff">🚢 ${s.flag||''} ${s.name}</div>
+        <div class="t-hl">${s.dest?'→ '+s.dest:'Underway'} ${s.speed||''}</div>
+        <div class="t-meta">${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°</div>
+      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No AIS data</div>';
+  }else if(tickerTab==='quakes'){
+    el.innerHTML=quakes.slice(0,60).sort((a,b)=>b.mag-a.mag).map(q=>
+      `<div class="tick">
+        <div class="t-src" style="color:${q.mag>=5?'#ff3b3b':q.mag>=4?'#ff8c00':'#ffc000'}">🌋 M${q.mag.toFixed(1)} · ${q.depth}km deep</div>
+        <div class="t-hl">${esc(q.place)}</div>
+        <div class="t-meta">${q.time} · ${q.lat.toFixed(2)}°, ${q.lon.toFixed(2)}°</div>
+      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No earthquake data</div>';
+  }else if(tickerTab==='threat'){
+    el.innerHTML=threats.slice(0,60).map(t=>
+      `<div class="tick">
+        <div class="t-src" style="color:#ff3b3b">☠️ ${t.src} · ${t.type.toUpperCase()}</div>
+        <div class="t-hl">${esc(t.title.slice(0,80))}</div>
+        <div class="t-meta">${esc(t.desc.slice(0,60))}</div>
+      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No threat data</div>';
   }else if(tickerTab==='sats'){
     el.innerHTML=liveSats.slice(0,80).map(s=>
       `<div class="tick">
@@ -1000,7 +1330,7 @@ function renderTicker(){
 
 function switchTab(tab){
   tickerTab=tab;
-  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('on',['news','flights','sats','wx'][i]===tab));
+  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('on',['news','flights','ships','sats','quakes','threat','wx'][i]===tab));
   renderTicker();
 }
 
@@ -1073,13 +1403,17 @@ function toggleLayer(name){
   document.getElementById('lyr-'+name).classList.toggle('off',!layers[name]);
   if(name==='news'){renderNewsMap();renderList();}
   else if(name==='flights')renderFlights();
+  else if(name==='ships')renderShips();
   else if(name==='sats')renderSatellites();
+  else if(name==='quakes')renderQuakes();
+  else if(name==='threat')renderThreats();
+  else if(name==='zones')renderZones();
   else renderWeather();
 }
 function toggleSrc(id){
   activeSrcs.has(id)?activeSrcs.delete(id):activeSrcs.add(id);
   document.querySelectorAll('.src-btn').forEach(b=>b.classList.toggle('off',!activeSrcs.has(b.dataset.src)));
-  renderNewsMap();renderFlights();renderSatellites();renderWeather();renderList();
+  renderNewsMap();renderFlights();renderShips();renderSatellites();renderQuakes();renderThreats();renderWeather();renderList();
 }
 function toggleCat(id){
   activeCats.has(id)?activeCats.delete(id):activeCats.add(id);
@@ -1107,9 +1441,23 @@ document.getElementById('date-range').addEventListener('change',e=>{dayRange=par
 ══════════════════════════════════════════ */
 const tip=document.getElementById('tooltip');
 viewer.screenSpaceEventHandler.setInputAction(click=>{
+  // Zone draw mode — place zone on click
+  if(zoneDrawMode){
+    const ray=viewer.camera.getPickRay(click.position);
+    const pos=viewer.scene.globe.pick(ray,viewer.scene);
+    if(pos){
+      const carto=Cesium.Ellipsoid.WGS84.cartesianToCartographic(pos);
+      const lat=Cesium.Math.toDegrees(carto.latitude);
+      const lon=Cesium.Math.toDegrees(carto.longitude);
+      addZone(lat,lon);
+    }
+    return;
+  }
   const p=viewer.scene.pick(click.position);
   if(p?.id?._evId)selectEvent(p.id._evId);
   else if(p?.id?._evIds?.length)selectEvent(allEvents.find(e=>e.id===p.id._evIds[0])?.id);
+  else if(p?.id?._quake&&p.id._quake.url)window.open(p.id._quake.url,'_blank');
+  else if(p?.id?._threat&&p.id._threat.link)window.open(p.id._threat.link,'_blank');
 },Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 viewer.screenSpaceEventHandler.setInputAction(move=>{
@@ -1118,9 +1466,21 @@ viewer.screenSpaceEventHandler.setInputAction(move=>{
   if(p?.id?._isFlight){
     const f=p.id._flight;
     html=`<strong>✈️ ${f.callsign||f.icao}</strong>${f.country}<br>Alt: ${f.alt?f.alt+'ft':'–'} · ${f.speed||'–'} · Hdg: ${f.heading||'–'}`;
+  }else if(p?.id?._isShip){
+    const s=p.id._ship;
+    html=`<strong>🚢 ${s.name}</strong>${s.flag}<br>Speed: ${s.speed||'–'} · Hdg: ${s.heading||'–'}<br>Dest: ${s.dest||'Unknown'}`;
   }else if(p?.id?._isSat){
     const s=p.id._sat;
-    html=`<strong>🛰️ ${s.name}</strong>Group: ${s.group}<br>Alt: ${s.alt}km · ${s.lat?.toFixed(2)}°, ${s.lon?.toFixed(2)}°`;
+    html=`<strong>🛰️ ${s.name}</strong>Group: ${s.group}<br>Alt: ${s.alt}km`;
+  }else if(p?.id?._isQuake){
+    const q=p.id._quake;
+    html=`<strong>🌋 M${q.mag.toFixed(1)} Earthquake</strong>${esc(q.place)}<br>Depth: ${q.depth}km · ${q.time}`;
+  }else if(p?.id?._isThreat){
+    const t=p.id._threat;
+    html=`<strong>☠️ ${t.src} ${t.type.toUpperCase()}</strong>${esc(t.title.slice(0,80))}<br><span style="color:#ff6666;font-size:9px">${esc(t.desc.slice(0,100))}</span>`;
+  }else if(p?.id?._isZone){
+    const z=p.id._zone;
+    html=`<strong>⚠️ ${z.label}</strong>User-defined alert zone<br>Radius: ${(z.radius/1000).toFixed(0)}km`;
   }else if(p?.id?._isAlert){
     const a=p.id._alert;
     html=`<strong>⚠️ ${a.event}</strong>${a.area}<br>Severity: ${a.severity}`;
@@ -1145,11 +1505,16 @@ setInterval(()=>{document.getElementById('clock').textContent=new Date().toUTCSt
 document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');
 
 window.addEventListener('load',()=>{
+  alertZones=loadZones();
+  document.getElementById('ct-zones').textContent=alertZones.length;
+  document.getElementById('zone-hint').style.display='none';
   toggleDebug();
   fetchAll();
 });
 setInterval(fetchAll, 10*60*1000);
 setInterval(()=>{fetchFlights().then(f=>{liveFlights=f;renderFlights();renderTicker();});}, 60*1000);
+setInterval(()=>{fetchShips().then(s=>{liveShips=s;renderShips();renderTicker();});}, 3*60*1000);
+setInterval(()=>{fetchQuakes().then(q=>{quakes=q;renderQuakes();renderTicker();});}, 5*60*1000);
 setInterval(updateSatPositions, 30*1000);
 setInterval(()=>{fetchSatellites().then(s=>{liveSats=s;renderSatellites();renderTicker();});}, 2*60*60*1000);
 </script>
