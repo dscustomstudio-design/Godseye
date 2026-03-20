@@ -22,6 +22,12 @@ const ALLOWED = [
   'www.nhc.noaa.gov',
   'celestrak.org',
   'celestrak.com',
+  // V15 additions
+  'data.aishub.net',           // AIS ship tracking
+  'earthquake.usgs.gov',       // USGS earthquake feed
+  'www.cisa.gov',              // CISA threat alerts
+  'feodotracker.abuse.ch',     // Feodo botnet C2 tracker
+  'abuse.ch',                  // abuse.ch feeds
 ];
 
 // ── PROXY  GET /proxy?url=<encoded-url>
