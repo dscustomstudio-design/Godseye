@@ -6,6 +6,7 @@
 <title>God's Eye V13</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@4.1.3/dist/satellite.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
@@ -14,6 +15,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 
 /* leaflet overrides */
 .leaflet-control-attribution{display:none!important}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes sat-pulse{0%,100%{opacity:.9}50%{opacity:.5}}
 .leaflet-control-zoom{border:1px solid rgba(0,212,255,.25)!important;background:rgba(2,6,14,.92)!important}
 .leaflet-control-zoom a{color:#00d4ff!important;background:transparent!important;border-bottom:1px solid rgba(0,212,255,.15)!important;line-height:26px!important}
 .leaflet-control-zoom a:hover{background:rgba(0,212,255,.12)!important}
@@ -189,6 +192,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
   <div id="layer-bar">
     <button class="lyr-btn" id="lyr-news"    style="border-color:#00ff9d;color:#00ff9d" onclick="toggleLayer('news')">📰 NEWS</button>
     <button class="lyr-btn" id="lyr-flights" style="border-color:#b06fff;color:#b06fff" onclick="toggleLayer('flights')">✈️ FLIGHTS</button>
+    <button class="lyr-btn" id="lyr-sats"    style="border-color:#fbbf24;color:#fbbf24" onclick="toggleLayer('sats')">🛰️ SATS</button>
     <button class="lyr-btn" id="lyr-weather" style="border-color:#ffc000;color:#ffc000" onclick="toggleLayer('weather')">🌩 ALERTS</button>
     <button class="lyr-btn" id="lyr-storms"  style="border-color:#ff6600;color:#ff6600" onclick="toggleLayer('storms')">🌀 STORMS</button>
   </div>
@@ -204,6 +208,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
     <button class="src-btn" data-src="GUARDIAN" style="border-color:#005689;background:#00568912" onclick="toggleSrc('GUARDIAN')">GUARDIAN</button>
     <button class="src-btn" data-src="NOAA"     style="border-color:#ffc000;background:#ffc00012" onclick="toggleSrc('NOAA')">NOAA</button>
     <button class="src-btn" data-src="OPENSKY"  style="border-color:#b06fff;background:#b06fff12" onclick="toggleSrc('OPENSKY')">OPENSKY</button>
+    <button class="src-btn" data-src="CELESTRAK" style="border-color:#fbbf24;background:#fbbf2412" onclick="toggleSrc('CELESTRAK')">SATS</button>
   </div>
 
   <div id="cat-filters">
@@ -221,6 +226,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
   <div id="stats">
     <div>News: <span id="ct-news">0</span></div>
     <div>Flights: <span id="ct-flights">0</span></div>
+    <div>Sats: <span id="ct-sats">0</span></div>
     <div>WX: <span id="ct-alerts">0</span></div>
     <div>Storms: <span id="ct-storms">0</span></div>
   </div>
@@ -237,6 +243,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
     <div id="ticker-tabs">
       <button class="ttab on" onclick="switchTab('news')">NEWS</button>
       <button class="ttab"    onclick="switchTab('flights')">FLIGHTS</button>
+      <button class="ttab"    onclick="switchTab('sats')">SATS</button>
       <button class="ttab"    onclick="switchTab('wx')">WX</button>
     </div>
   </div>
@@ -264,6 +271,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
   <div class="leg"><div class="leg-dot" style="background:#ffc000"></div>WX Alert</div>
   <div class="leg"><div class="leg-dot" style="background:#ff6600"></div>Storm</div>
   <div class="leg"><div class="leg-dot" style="background:#b06fff"></div>Live Flight</div>
+  <div class="leg"><div class="leg-dot" style="background:#fbbf24"></div>Satellite</div>
   <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Politics</div>
   <div class="leg"><div class="leg-dot" style="background:#00ff9d"></div>General</div>
 </div>
@@ -295,6 +303,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 // Layer groups — each data type on its own layer
 const newsLayer    = L.layerGroup().addTo(map);
 const flightLayer  = L.layerGroup().addTo(map);
+const satLayer     = L.layerGroup().addTo(map);
 const weatherLayer = L.layerGroup().addTo(map);
 const stormLayer   = L.layerGroup().addTo(map);
 
@@ -402,10 +411,10 @@ function assignVehicle(cat,geo){
 /* ══════════════════════════════════════════
    STATE
 ══════════════════════════════════════════ */
-let allEvents=[],liveFlights=[],wxAlerts=[],storms=[];
-let activeSrcs=new Set([...RSS_FEEDS.map(s=>s.id),'NOAA','OPENSKY']);
+let allEvents=[],liveFlights=[],wxAlerts=[],storms=[],liveSats=[];
+let activeSrcs=new Set([...RSS_FEEDS.map(s=>s.id),'NOAA','OPENSKY','CELESTRAK']);
 let activeCats=new Set(Object.keys(CAT_RX).concat(['general']));
-let layers={news:true,flights:true,weather:true,storms:true};
+let layers={news:true,flights:true,sats:true,weather:true,storms:true};
 let searchQ='',dayRange=30,selectedId=null,tickerTab='news';
 
 /* ══════════════════════════════════════════
@@ -587,6 +596,184 @@ async function fetchNOAAConditions(){
 }
 
 /* ══════════════════════════════════════════
+   FETCH SATELLITES — CelesTrak TLE data
+   Parsed client-side with satellite.js
+══════════════════════════════════════════ */
+const SAT_GROUPS = [
+  { name:'ISS',       url:'https://celestrak.org/SOCRATES/query.php?IDENT=ISS&TYPE=ALL&LIMIT=1&FORMAT=tle', color:'#00ff9d', icon:'🛰️' },
+  { name:'Starlink',  url:'https://celestrak.org/SOCRATES/query.php?IDENT=STARLINK&TYPE=ALL&LIMIT=100&FORMAT=tle', color:'#60a5fa', icon:'🛰️' },
+  // Use the simpler groups endpoint
+  { name:'ISS',       url:'https://celestrak.org/SOCRATES/query.php?IDENT=ISS&TYPE=ALL&FORMAT=tle', color:'#00ff9d', icon:'🛰️' },
+];
+
+// CelesTrak group endpoints — much simpler
+const TLE_SOURCES = [
+  { name:'ISS',       color:'#00ff9d', url:'https://celestrak.org/SOCRATES/query.php?CATNR=25544&FORMAT=TLE' },
+  { name:'Starlink',  color:'#60a5fa', url:'https://celestrak.org/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle' },
+  { name:'Military',  color:'#ff3b3b', url:'https://celestrak.org/SOCRATES/query.php?GROUP=military&FORMAT=TLE' },
+  { name:'Weather',   color:'#ffc000', url:'https://celestrak.org/SOCRATES/query.php?GROUP=weather&FORMAT=TLE' },
+  { name:'GPS',       color:'#a78bfa', url:'https://celestrak.org/SOCRATES/query.php?GROUP=gps-ops&FORMAT=TLE' },
+];
+
+// Simpler, reliable CelesTrak URLs
+const CELESTRAK_SOURCES = [
+  { name:'ISS',      color:'#00ff9d', url:'https://celestrak.org/SOCRATES/query.php?CATNR=25544&FORMAT=TLE', limit:1 },
+  { name:'Starlink', color:'#60a5fa', url:'https://celestrak.org/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle', limit:80 },
+  { name:'Military', color:'#ff3b3b', url:'https://celestrak.org/SOCRATES/query.php?GROUP=military&FORMAT=TLE', limit:30 },
+  { name:'Weather',  color:'#ffc000', url:'https://celestrak.org/SOCRATES/query.php?GROUP=weather&FORMAT=TLE', limit:20 },
+  { name:'GPS',      color:'#a78bfa', url:'https://celestrak.org/SOCRATES/query.php?GROUP=gps-ops&FORMAT=TLE', limit:20 },
+];
+
+function parseTLE(txt, name, color, limit) {
+  const lines = txt.trim().split('\n').map(l => l.trim()).filter(Boolean);
+  const sats = [];
+  // TLE format: name line, line1 (starts with 1), line2 (starts with 2)
+  for (let i = 0; i < lines.length - 2 && sats.length < limit; i++) {
+    const l1 = lines[i], l2 = lines[i+1], l3 = lines[i+2];
+    if (l2.startsWith('1 ') && l3.startsWith('2 ')) {
+      try {
+        const satrec = satellite.twoline2satrec(l2, l3);
+        const satName = l1.startsWith('1 ') ? name : l1; // fallback name
+        sats.push({ name: satName, satrec, color, group: name });
+        i += 2; // skip the two TLE lines
+      } catch(e) {}
+    } else if (l1.startsWith('1 ') && l2.startsWith('2 ')) {
+      // Two-line format without name
+      try {
+        const satrec = satellite.twoline2satrec(l1, l2);
+        sats.push({ name, satrec, color, group: name });
+        i += 1;
+      } catch(e) {}
+    }
+  }
+  return sats;
+}
+
+function propagateSat(satrec, date) {
+  try {
+    const posVel = satellite.propagate(satrec, date);
+    if (!posVel.position) return null;
+    const gmst = satellite.gstime(date);
+    const geo = satellite.eciToGeodetic(posVel.position, gmst);
+    return {
+      lat: satellite.degreesLat(geo.latitude),
+      lon: satellite.degreesLong(geo.longitude),
+      alt: Math.round(geo.height), // km
+    };
+  } catch(e) { return null; }
+}
+
+function getOrbitTrack(satrec, steps=60, stepMinutes=1.5) {
+  const points = [];
+  const now = new Date();
+  for (let i = 0; i < steps; i++) {
+    const t = new Date(now.getTime() + i * stepMinutes * 60000);
+    const pos = propagateSat(satrec, t);
+    if (pos) points.push([pos.lat, pos.lon]);
+  }
+  // Split track at antimeridian crossings to avoid lines across the map
+  const segments = [];
+  let seg = [];
+  for (let i = 0; i < points.length; i++) {
+    if (i > 0 && Math.abs(points[i][1] - points[i-1][1]) > 180) {
+      if (seg.length > 1) segments.push(seg);
+      seg = [];
+    }
+    seg.push(points[i]);
+  }
+  if (seg.length > 1) segments.push(seg);
+  return segments;
+}
+
+async function fetchSatellites() {
+  if (!window.satellite) { log('warn', 'satellite.js not loaded yet'); return []; }
+  const allSats = [];
+  log('warn', 'Fetching satellite TLEs from CelesTrak…');
+
+  await Promise.allSettled(CELESTRAK_SOURCES.map(async src => {
+    try {
+      const res = await fetch(PROXY(src.url), { signal: AbortSignal.timeout(15000) });
+      if (!res.ok) { log('fail', `TLE ${src.name}: HTTP ${res.status}`); return; }
+      const txt = await res.text();
+      if (!txt || txt.length < 20) { log('fail', `TLE ${src.name}: empty response`); return; }
+      const parsed = parseTLE(txt, src.name, src.color, src.limit);
+      log('ok', `TLE ${src.name}: ${parsed.length} satellites`);
+      allSats.push(...parsed);
+    } catch(e) {
+      log('fail', `TLE ${src.name}: ${e.message}`);
+    }
+  }));
+
+  // Propagate all to current position
+  const now = new Date();
+  const result = allSats.map(s => {
+    const pos = propagateSat(s.satrec, now);
+    if (!pos) return null;
+    return { ...s, lat: pos.lat, lon: pos.lon, alt: pos.alt };
+  }).filter(Boolean);
+
+  log('ok', `Satellites ready: ${result.length} tracked`);
+  document.getElementById('ct-sats').textContent = result.length;
+  document.getElementById('sb-flights').textContent =
+    (liveFlights.length || 0) + ' ac / ' + result.length + ' sat';
+  return result;
+}
+
+/* ══════════════════════════════════════════
+   RENDER — SATELLITES on Leaflet
+══════════════════════════════════════════ */
+function renderSatellites() {
+  satLayer.clearLayers();
+  if (!layers.sats || !activeSrcs.has('CELESTRAK')) return;
+
+  const now = new Date();
+  liveSats.forEach(s => {
+    // Satellite icon
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="font-size:15px;animation:sat-pulse 2s infinite;
+        filter:drop-shadow(0 0 4px ${s.color})" title="${s.name}">🛰️</div>`,
+      iconSize: [18, 18], iconAnchor: [9, 9],
+    });
+
+    const m = L.marker([s.lat, s.lon], { icon });
+    m.bindPopup(`
+      <b style="color:${s.color}">🛰️ ${s.name}</b><br>
+      <span style="color:#aaa;font-size:10px">
+        Group: ${s.group}<br>
+        Alt: ${s.alt} km &nbsp; (${Math.round(s.alt * 0.621)} mi)<br>
+        Lat: ${s.lat.toFixed(2)}° &nbsp; Lon: ${s.lon.toFixed(2)}°
+      </span>
+    `, { maxWidth: 200 });
+    m.addTo(satLayer);
+
+    // Orbital track — next 90 minutes
+    const segments = getOrbitTrack(s.satrec, 60, 1.5);
+    segments.forEach((seg, i) => {
+      L.polyline(seg, {
+        color: s.color,
+        weight: i === 0 ? 1.5 : 0.8,
+        opacity: i === 0 ? 0.7 : 0.3,
+        dashArray: '4 6',
+        interactive: false,
+      }).addTo(satLayer);
+    });
+  });
+}
+
+// Update satellite positions every 30 seconds using existing TLE data
+function updateSatPositions() {
+  if (!liveSats.length || !window.satellite) return;
+  const now = new Date();
+  liveSats = liveSats.map(s => {
+    const pos = propagateSat(s.satrec, now);
+    if (!pos) return s;
+    return { ...s, lat: pos.lat, lon: pos.lon, alt: pos.alt };
+  });
+  renderSatellites();
+}
+
+/* ══════════════════════════════════════════
    MAIN FETCH
 ══════════════════════════════════════════ */
 async function fetchAll(){
@@ -594,8 +781,8 @@ async function fetchAll(){
   document.getElementById('lbar').style.display='block';
   log('warn','=== Starting full fetch ===');
 
-  const[rssR,flightR,alertR,stormR]=await Promise.allSettled([
-    fetchRSS(),fetchFlights(),fetchNOAAAlerts(),fetchNOAAStorms()
+  const[rssR,flightR,alertR,stormR,satR]=await Promise.allSettled([
+    fetchRSS(),fetchFlights(),fetchNOAAAlerts(),fetchNOAAStorms(),fetchSatellites()
   ]);
   fetchNOAAConditions();
 
@@ -609,6 +796,7 @@ async function fetchAll(){
   liveFlights=flightR.status==='fulfilled'?flightR.value:[];
   wxAlerts=alertR.status==='fulfilled'?alertR.value:[];
   storms=stormR.status==='fulfilled'?stormR.value:[];
+  liveSats=satR.status==='fulfilled'?satR.value:[];
 
   document.getElementById('ct-news').textContent=allEvents.length;
   document.getElementById('ct-alerts').textContent=wxAlerts.length;
@@ -617,11 +805,12 @@ async function fetchAll(){
   document.getElementById('sb-ref').textContent=new Date().toLocaleTimeString();
   document.getElementById('lbar').style.display='none';
 
-  log('ok',`Done — ${allEvents.length} stories, ${liveFlights.length} flights, ${wxAlerts.length} wx`);
-  setStatus(allEvents.length||liveFlights.length?'live':'err');
+  log('ok',`Done — ${allEvents.length} stories, ${liveFlights.length} flights, ${liveSats.length} sats, ${wxAlerts.length} wx`);
+  setStatus(allEvents.length||liveFlights.length||liveSats.length?'live':'err');
 
   renderNewsMap();
   renderFlights();
+  renderSatellites();
   renderWeather();
   renderList();
   renderTicker();
@@ -835,6 +1024,13 @@ function renderTicker(){
         <div class="t-hl">${esc(ev.headline)}</div>
         <div class="t-meta">${new Date(ev.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'})}${ev.geo?' · 📍'+ev.geo.name:''}</div>
       </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">Fetching…</div>';
+  }else if(tickerTab==='sats'){
+    el.innerHTML=liveSats.slice(0,80).map(s=>
+      `<div class="tick">
+        <div class="t-src" style="color:${s.color}">🛰️ ${s.group}</div>
+        <div class="t-hl">${esc(s.name)}</div>
+        <div class="t-meta">Alt: ${s.alt}km · ${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°</div>
+      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No satellite data</div>';
   }else if(tickerTab==='flights'){
     el.innerHTML=liveFlights.slice(0,80).map(f=>
       `<div class="tick">
@@ -858,7 +1054,7 @@ function renderTicker(){
 
 function switchTab(tab){
   tickerTab=tab;
-  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('on',['news','flights','wx'][i]===tab));
+  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('on',['news','flights','sats','wx'][i]===tab));
   renderTicker();
 }
 
@@ -926,13 +1122,14 @@ function toggleLayer(name){
   document.getElementById('lyr-'+name).classList.toggle('off',!layers[name]);
   if(name==='news')renderNewsMap();
   else if(name==='flights')renderFlights();
+  else if(name==='sats')renderSatellites();
   else if(name==='weather'||name==='storms')renderWeather();
   renderList();
 }
 function toggleSrc(id){
   activeSrcs.has(id)?activeSrcs.delete(id):activeSrcs.add(id);
   document.querySelectorAll('.src-btn').forEach(b=>b.classList.toggle('off',!activeSrcs.has(b.dataset.src)));
-  renderNewsMap();renderFlights();renderWeather();renderList();
+  renderNewsMap();renderFlights();renderSatellites();renderWeather();renderList();
 }
 function toggleCat(id){
   activeCats.has(id)?activeCats.delete(id):activeCats.add(id);
@@ -969,6 +1166,10 @@ window.addEventListener('load',()=>{
 });
 setInterval(fetchAll,10*60*1000);
 setInterval(()=>{fetchFlights().then(f=>{liveFlights=f;renderFlights();renderTicker();});},60*1000);
+// Update satellite positions every 30s from existing TLE data (no new fetch needed)
+setInterval(updateSatPositions, 30*1000);
+// Re-fetch TLEs every 2 hours
+setInterval(()=>{fetchSatellites().then(s=>{liveSats=s;renderSatellites();renderTicker();});},2*60*60*1000);
 </script>
 </body>
 </html>
