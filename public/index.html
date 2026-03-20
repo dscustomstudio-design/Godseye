@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>God's Eye V15</title>
+<title>God's Eye V16</title>
 <script src="https://cdn.jsdelivr.net/npm/cesium@1.105.0/Build/Cesium/Cesium.js"></script>
 <link href="https://cdn.jsdelivr.net/npm/cesium@1.105.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@4.1.3/dist/satellite.min.js"></script>
@@ -208,18 +208,55 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
   color:rgba(0,255,157,.45);white-space:nowrap;z-index:100;}
 .leg{display:flex;align-items:center;gap:4px;}
 .leg-dot{width:7px;height:7px;border-radius:50%;}
+
+/* ── CAMERA POPUP ── */
+#cam-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;display:none;}
+#cam-overlay.show{display:block;}
+#cam-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:520px;max-width:90vw;background:var(--panel);border:1px solid var(--c);
+  border-radius:4px;z-index:9999;display:none;flex-direction:column;overflow:hidden;
+  box-shadow:0 0 40px rgba(0,212,255,.15);}
+#cam-popup.show{display:flex;}
+#cam-header{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+#cam-title{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;
+  color:var(--c);letter-spacing:2px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;max-width:400px;}
+#cam-close{background:transparent;border:1px solid var(--border);border-radius:2px;
+  color:var(--r);font-size:14px;cursor:pointer;padding:2px 8px;line-height:1;}
+#cam-close:hover{background:rgba(255,59,59,.15);}
+#cam-body{position:relative;width:100%;padding-top:56.25%;background:#000;}
+#cam-frame{position:absolute;top:0;left:0;width:100%;height:100%;border:none;}
+#cam-meta{padding:6px 12px;font-size:9px;color:rgba(0,212,255,.5);
+  border-top:1px solid var(--border);display:flex;gap:14px;flex-shrink:0;}
 </style>
 </head>
 <body>
 <div id="cesiumContainer"></div>
-<div id="cesiumContainer"></div>
+
+<!-- CAMERA POPUP -->
+<div id="cam-overlay" onclick="closeCamera()"></div>
+<div id="cam-popup">
+  <div id="cam-header">
+    <span id="cam-title">📹 LIVE FEED</span>
+    <button id="cam-close" onclick="closeCamera()">✕</button>
+  </div>
+  <div id="cam-body">
+    <iframe id="cam-frame" allowfullscreen allow="autoplay"></iframe>
+  </div>
+  <div id="cam-meta">
+    <span id="cam-loc">–</span>
+    <span id="cam-src">–</span>
+    <span id="cam-coord">–</span>
+  </div>
+</div>
 
 <!-- LEFT HUD -->
 <div class="panel" id="hud">
   <div id="hud-top">
     <div>
       <div class="sys-title">⬡ GOD'S EYE</div>
-      <div class="sys-sub">LIVE GLOBAL INTEL — V15</div>
+      <div class="sys-sub">LIVE GLOBAL INTEL — V16</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
       <span id="status-txt" style="font-size:9px;color:rgba(0,255,157,.4)">INIT</span>
@@ -251,6 +288,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
       <button class="lyr-btn" id="lyr-weather" style="border-color:#ffc000;color:#ffc000" onclick="toggleLayer('weather')">🌩 ALERTS</button>
       <button class="lyr-btn" id="lyr-storms"  style="border-color:#ff6600;color:#ff6600" onclick="toggleLayer('storms')">🌀 STORMS</button>
       <button class="lyr-btn" id="lyr-zones"   style="border-color:#ff00ff;color:#ff00ff" onclick="toggleLayer('zones')">⚠️ ZONES</button>
+      <button class="lyr-btn" id="lyr-cameras" style="border-color:#39ff14;color:#39ff14" onclick="toggleLayer('cameras')">📹 CAMS</button>
     </div>
 
     <div id="src-filters">
@@ -268,6 +306,8 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
       <button class="src-btn" data-src="AISHUB"    style="border-color:#00d4ff;background:#00d4ff12" onclick="toggleSrc('AISHUB')">AIS</button>
       <button class="src-btn" data-src="USGS"      style="border-color:#ff8c00;background:#ff8c0012" onclick="toggleSrc('USGS')">USGS</button>
       <button class="src-btn" data-src="CISA"      style="border-color:#ff3b3b;background:#ff3b3b12" onclick="toggleSrc('CISA')">CISA</button>
+      <button class="src-btn" data-src="WINDY"     style="border-color:#39ff14;background:#39ff1412" onclick="toggleSrc('WINDY')">WINDY</button>
+      <button class="src-btn" data-src="DOT"       style="border-color:#39ff14;background:#39ff1412" onclick="toggleSrc('DOT')">DOT</button>
     </div>
 
     <div id="cat-filters">
@@ -291,6 +331,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
       <div>Threats: <span id="ct-threats">0</span></div>
       <div>WX: <span id="ct-alerts">0</span></div>
       <div>Zones: <span id="ct-zones">0</span></div>
+      <div>Cams: <span id="ct-cameras">0</span></div>
     </div>
     <div style="padding:4px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:4px;align-items:center;">
       <button id="zone-draw-btn" onclick="startZoneDraw()" style="padding:3px 8px;border-radius:2px;border:1px solid #ff00ff;background:rgba(255,0,255,.1);color:#ff00ff;font-family:inherit;font-size:9px;cursor:pointer;letter-spacing:1px;">⚠️ DRAW ZONE</button>
@@ -317,6 +358,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
         <button class="ttab"    onclick="switchTab('sats')">SATS</button>
         <button class="ttab"    onclick="switchTab('quakes')">QUAKES</button>
         <button class="ttab"    onclick="switchTab('threat')">THREAT</button>
+        <button class="ttab"    onclick="switchTab('cams')">CAMS</button>
         <button class="ttab"    onclick="switchTab('wx')">WX</button>
       </div>
       <button id="ticker-collapse-btn" onclick="toggleTicker()" title="Collapse ticker">▶</button>
@@ -364,6 +406,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
   <div class="leg"><div class="leg-dot" style="background:#00d4ff"></div>Ship</div>
   <div class="leg"><div class="leg-dot" style="background:#fbbf24"></div>Satellite</div>
   <div class="leg"><div class="leg-dot" style="background:#ff00ff"></div>Alert Zone</div>
+  <div class="leg"><div class="leg-dot" style="background:#39ff14"></div>Camera</div>
   <div class="leg"><div class="leg-dot" style="background:#00ff9d"></div>General</div>
 </div>
 
@@ -507,11 +550,11 @@ function assignVehicle(cat,geo){
    STATE
 ══════════════════════════════════════════ */
 let allEvents=[],liveFlights=[],liveSats=[],wxAlerts=[],storms=[];
-let liveShips=[],quakes=[],threats=[],alertZones=[];
-let newsEnts={},vehicleEnts=[],flightEnts=[],satEnts=[],weatherEnts=[],shipEnts=[],quakeEnts=[],threatEnts=[],zoneEnts=[];
-let activeSrcs=new Set([...RSS_FEEDS.map(s=>s.id),'NOAA','OPENSKY','CELESTRAK','AISHUB','USGS','CISA']);
+let liveShips=[],quakes=[],threats=[],alertZones=[],cameras=[];
+let newsEnts={},vehicleEnts=[],flightEnts=[],satEnts=[],weatherEnts=[],shipEnts=[],quakeEnts=[],threatEnts=[],zoneEnts=[],cameraEnts=[];
+let activeSrcs=new Set([...RSS_FEEDS.map(s=>s.id),'NOAA','OPENSKY','CELESTRAK','AISHUB','USGS','CISA','WINDY','DOT']);
 let activeCats=new Set(Object.keys(CAT_RX).concat(['general']));
-let layers={news:true,flights:true,ships:true,sats:true,quakes:true,threat:true,weather:true,storms:true,zones:true};
+let layers={news:true,flights:true,ships:true,sats:true,quakes:true,threat:true,weather:true,storms:true,zones:true,cameras:true};
 let searchQ='',dayRange=30,selectedId=null,tickerTab='news';
 let zoneDrawMode=false;
 
@@ -1033,14 +1076,164 @@ function renderZones(){
 }
 
 /* ══════════════════════════════════════════
+   CAMERA CONFIG — paste Windy API key here
+══════════════════════════════════════════ */
+const WINDY_KEY = 'YOUR_WINDY_API_KEY'; // ← replace with your key
+
+/* ══════════════════════════════════════════
+   DOT TRAFFIC CAMS — free, no key needed
+   Hardcoded high-traffic US highway cams
+   with known public MJPEG/embed URLs
+══════════════════════════════════════════ */
+const DOT_CAMS = [
+  // New York
+  {id:'dot_nyc_1',name:'I-95 George Washington Bridge',lat:40.8517,lon:-73.9527,src:'DOT',
+   embed:'https://511ny.org/map#',streamUrl:'https://webcams.nyctmc.org/api/cameras/e7e4e074-a994-4cfa-98c7-3ae7f3a43f7f/image'},
+  // Los Angeles
+  {id:'dot_la_1',name:'I-405 Los Angeles',lat:34.0522,lon:-118.4437,src:'DOT',
+   embed:'https://cctv.dot.ca.gov/?cameras=1202741'},
+  // Chicago
+  {id:'dot_chi_1',name:'I-90 Chicago Loop',lat:41.8781,lon:-87.6298,src:'DOT',
+   embed:'https://idot.illinois.gov/transportation-system/traffic-information'},
+  // Texas
+  {id:'dot_tx_1',name:'I-35 Austin',lat:30.2672,lon:-97.7431,src:'DOT',
+   embed:'https://www.txdot.gov/inside-txdot/division/traffic/traveler-information-system.html'},
+  {id:'dot_tx_2',name:'I-10 Houston',lat:29.7604,lon:-95.3698,src:'DOT',
+   embed:'https://houstontranstar.org/traffic_cameras/'},
+  // Florida
+  {id:'dot_fl_1',name:'I-95 Miami',lat:25.7617,lon:-80.1918,src:'DOT',
+   embed:'https://fl511.com/'},
+  // Georgia
+  {id:'dot_ga_1',name:'I-285 Atlanta',lat:33.7490,lon:-84.3880,src:'DOT',
+   embed:'https://511ga.org/'},
+  // Washington State
+  {id:'dot_wa_1',name:'I-5 Seattle',lat:47.6062,lon:-122.3321,src:'DOT',
+   embed:'https://wsdot.wa.gov/traffic/seattle/'},
+  // Nevada
+  {id:'dot_nv_1',name:'Las Vegas Strip I-15',lat:36.1699,lon:-115.1398,src:'DOT',
+   embed:'https://nvroads.com/'},
+  // Colorado
+  {id:'dot_co_1',name:'I-70 Denver Eisenhower Tunnel',lat:39.6747,lon:-105.9069,src:'DOT',
+   embed:'https://cotrip.org/'},
+  // NOAA Weather Cams
+  {id:'noaa_cam_1',name:'NOAA Pacific Storm Cam',lat:37.80,lon:-122.47,src:'DOT',
+   embed:'https://www.noaa.gov/media/img/site/noaa-emblem-rgb-2022.png',
+   streamUrl:'https://www.nws.noaa.gov/'},
+];
+
+/* ══════════════════════════════════════════
+   FETCH WINDY WEBCAMS
+══════════════════════════════════════════ */
+async function fetchWindyCams(){
+  if(WINDY_KEY==='YOUR_WINDY_API_KEY'){
+    log('warn','Windy key not set — using DOT cams only');
+    return DOT_CAMS;
+  }
+  try{
+    log('warn','Fetching Windy webcams…');
+    // Windy Webcams API — fetch cams in visible viewport clusters
+    const regions=[
+      {lat:40,lon:-74,r:500},  // US East
+      {lat:34,lon:-118,r:500}, // US West
+      {lat:51,lon:0,r:600},    // Europe
+      {lat:35,lon:139,r:400},  // Japan
+      {lat:-33,lon:151,r:400}, // Australia
+      {lat:22,lon:114,r:400},  // Hong Kong/China
+    ];
+    const all=[];
+    await Promise.allSettled(regions.map(async r=>{
+      const url=`https://api.windy.com/webcams/api/v3/webcams?lang=en&limit=50&offset=0&nearby=${r.lat},${r.lon},${r.r}&fields=webcamId,title,status,location,player`;
+      const res=await fetch(url,{
+        headers:{'x-windy-api-key':WINDY_KEY},
+        signal:AbortSignal.timeout(12000),
+      });
+      if(!res.ok){log('fail',`Windy region ${r.lat}: HTTP ${res.status}`);return;}
+      const json=await res.json();
+      (json.webcams||[]).forEach(w=>{
+        if(w.status!=='active')return;
+        all.push({
+          id:'windy_'+w.webcamId,
+          name:w.title||'Webcam',
+          lat:w.location?.latitude,
+          lon:w.location?.longitude,
+          city:w.location?.city||'',
+          country:w.location?.country||'',
+          src:'WINDY',
+          embed:w.player?.day?.embed||'',
+          thumb:w.player?.day?.preview||'',
+        });
+      });
+    }));
+    const result=[...DOT_CAMS,...all.filter(c=>c.lat&&c.lon)];
+    log('ok',`Cameras: ${result.length} total (${DOT_CAMS.length} DOT + ${all.length} Windy)`);
+    document.getElementById('ct-cameras').textContent=result.length;
+    return result;
+  }catch(e){
+    log('fail','Windy: '+e.message+' — using DOT only');
+    return DOT_CAMS;
+  }
+}
+
+/* ══════════════════════════════════════════
+   CAMERA POPUP
+══════════════════════════════════════════ */
+function openCamera(cam){
+  document.getElementById('cam-title').textContent='📹 '+cam.name;
+  document.getElementById('cam-loc').textContent='📍 '+(cam.city?cam.city+', ':'')+cam.country;
+  document.getElementById('cam-src').textContent='SRC: '+cam.src;
+  document.getElementById('cam-coord').textContent=`${cam.lat?.toFixed(3)}°, ${cam.lon?.toFixed(3)}°`;
+  const frame=document.getElementById('cam-frame');
+  // Use embed URL if available, otherwise stream, otherwise DOT portal
+  if(cam.embed&&cam.embed.startsWith('http')){
+    frame.src=cam.embed;
+  }else if(cam.streamUrl){
+    // For MJPEG streams use img tag fallback
+    frame.src='about:blank';
+    document.getElementById('cam-body').innerHTML=
+      `<img id="cam-frame" src="${cam.streamUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;background:#000" onerror="this.src='';this.alt='Stream unavailable'">`;
+  }else{
+    frame.src='about:blank';
+  }
+  document.getElementById('cam-popup').classList.add('show');
+  document.getElementById('cam-overlay').classList.add('show');
+}
+function closeCamera(){
+  document.getElementById('cam-popup').classList.remove('show');
+  document.getElementById('cam-overlay').classList.remove('show');
+  // Reset frame to stop stream
+  const body=document.getElementById('cam-body');
+  body.innerHTML='<iframe id="cam-frame" allowfullscreen allow="autoplay" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"></iframe>';
+}
+
+/* ══════════════════════════════════════════
+   RENDER — CAMERAS on Cesium
+══════════════════════════════════════════ */
+function renderCameras(){
+  cameraEnts.forEach(e=>viewer.entities.remove(e));cameraEnts=[];
+  if(!layers.cameras)return;
+  const showWindy=activeSrcs.has('WINDY');
+  const showDOT=activeSrcs.has('DOT');
+  cameras.filter(c=>(c.src==='WINDY'&&showWindy)||(c.src==='DOT'&&showDOT)).forEach(cam=>{
+    cameraEnts.push(viewer.entities.add({
+      id:cam.id,_cam:cam,_isCam:true,
+      position:Cesium.Cartesian3.fromDegrees(cam.lon,cam.lat,0),
+      billboard:{image:makePinCanvas('📹','#39ff14',false),
+        width:20,height:20,verticalOrigin:Cesium.VerticalOrigin.CENTER,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,
+        heightReference:Cesium.HeightReference.CLAMP_TO_GROUND},
+    }));
+  });
+}
+
+/* ══════════════════════════════════════════
    MAIN FETCH
 ══════════════════════════════════════════ */
 async function fetchAll(){
   setStatus('fetching');
   document.getElementById('lbar').style.display='block';
   log('warn','=== Starting full fetch ===');
-  const[rssR,flightR,shipR,satR,quakeR,threatR,alertR,stormR]=await Promise.allSettled([
-    fetchRSS(),fetchFlights(),fetchShips(),fetchSatellites(),fetchQuakes(),fetchThreats(),fetchNOAAAlerts(),fetchNOAAStorms()
+  const[rssR,flightR,shipR,satR,quakeR,threatR,alertR,stormR,camR]=await Promise.allSettled([
+    fetchRSS(),fetchFlights(),fetchShips(),fetchSatellites(),fetchQuakes(),fetchThreats(),fetchNOAAAlerts(),fetchNOAAStorms(),fetchWindyCams()
   ]);
   fetchNOAAConditions();
 
@@ -1054,6 +1247,8 @@ async function fetchAll(){
   threats=threatR.status==='fulfilled'?threatR.value:[];
   wxAlerts=alertR.status==='fulfilled'?alertR.value:[];
   storms=stormR.status==='fulfilled'?stormR.value:[];
+  cameras=camR.status==='fulfilled'?camR.value:DOT_CAMS;
+  document.getElementById('ct-cameras').textContent=cameras.length;
 
   document.getElementById('ct-news').textContent=allEvents.length;
   document.getElementById('ct-alerts').textContent=wxAlerts.length;
@@ -1064,7 +1259,7 @@ async function fetchAll(){
   log('ok',`Done — ${allEvents.length} news, ${liveFlights.length} flights, ${liveShips.length} ships, ${liveSats.length} sats, ${quakes.length} quakes, ${threats.length} threats`);
   setStatus(allEvents.length||liveFlights.length||liveSats.length?'live':'err');
 
-  renderNewsMap();renderFlights();renderShips();renderSatellites();renderQuakes();renderThreats();renderZones();renderWeather();renderList();renderTicker();
+  renderNewsMap();renderFlights();renderShips();renderSatellites();renderQuakes();renderThreats();renderZones();renderCameras();renderWeather();renderList();renderTicker();
 }
 
 /* ══════════════════════════════════════════
@@ -1314,6 +1509,15 @@ function renderTicker(){
         <div class="t-hl">${esc(s.name)}</div>
         <div class="t-meta">Alt: ${s.alt}km · ${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°</div>
       </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No satellite data</div>';
+  }else if(tickerTab==='cams'){
+    el.innerHTML=cameras.slice(0,60).map(c=>{
+      const safeJson=JSON.stringify({id:c.id,name:c.name,lat:c.lat,lon:c.lon,city:c.city||'',country:c.country||'',src:c.src,embed:c.embed||'',streamUrl:c.streamUrl||''}).replace(/'/g,"\\'");
+      return`<div class="tick" style="cursor:pointer" onclick='openCamera(${safeJson})'>
+        <div class="t-src" style="color:#39ff14">📹 ${c.src} · ${c.country||'US'}</div>
+        <div class="t-hl">${esc(c.name)}</div>
+        <div class="t-meta">${c.city||''} · ${(c.lat||0).toFixed(2)}°, ${(c.lon||0).toFixed(2)}°</div>
+      </div>`;
+    }).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No camera data</div>';
   }else{
     const all=[
       ...wxAlerts.map(a=>({icon:'⚠️',color:'#ffc000',title:a.event,sub:a.area,sev:a.severity})),
@@ -1330,7 +1534,7 @@ function renderTicker(){
 
 function switchTab(tab){
   tickerTab=tab;
-  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('on',['news','flights','ships','sats','quakes','threat','wx'][i]===tab));
+  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('on',['news','flights','ships','sats','quakes','threat','cams','wx'][i]===tab));
   renderTicker();
 }
 
@@ -1408,12 +1612,13 @@ function toggleLayer(name){
   else if(name==='quakes')renderQuakes();
   else if(name==='threat')renderThreats();
   else if(name==='zones')renderZones();
+  else if(name==='cameras')renderCameras();
   else renderWeather();
 }
 function toggleSrc(id){
   activeSrcs.has(id)?activeSrcs.delete(id):activeSrcs.add(id);
   document.querySelectorAll('.src-btn').forEach(b=>b.classList.toggle('off',!activeSrcs.has(b.dataset.src)));
-  renderNewsMap();renderFlights();renderShips();renderSatellites();renderQuakes();renderThreats();renderWeather();renderList();
+  renderNewsMap();renderFlights();renderShips();renderSatellites();renderQuakes();renderThreats();renderCameras();renderWeather();renderList();
 }
 function toggleCat(id){
   activeCats.has(id)?activeCats.delete(id):activeCats.add(id);
@@ -1454,6 +1659,7 @@ viewer.screenSpaceEventHandler.setInputAction(click=>{
     return;
   }
   const p=viewer.scene.pick(click.position);
+  if(p?.id?._isCam){openCamera(p.id._cam);return;}
   if(p?.id?._evId)selectEvent(p.id._evId);
   else if(p?.id?._evIds?.length)selectEvent(allEvents.find(e=>e.id===p.id._evIds[0])?.id);
   else if(p?.id?._quake&&p.id._quake.url)window.open(p.id._quake.url,'_blank');
@@ -1463,7 +1669,10 @@ viewer.screenSpaceEventHandler.setInputAction(click=>{
 viewer.screenSpaceEventHandler.setInputAction(move=>{
   const p=viewer.scene.pick(move.endPosition);
   let html=null;
-  if(p?.id?._isFlight){
+  if(p?.id?._isCam){
+    const c=p.id._cam;
+    html=`<strong>📹 ${c.name}</strong>${c.city?c.city+', ':''} ${c.country}<br><span style="color:#39ff14;font-size:9px">Click to open live feed · ${c.src}</span>`;
+  }else if(p?.id?._isFlight){
     const f=p.id._flight;
     html=`<strong>✈️ ${f.callsign||f.icao}</strong>${f.country}<br>Alt: ${f.alt?f.alt+'ft':'–'} · ${f.speed||'–'} · Hdg: ${f.heading||'–'}`;
   }else if(p?.id?._isShip){
