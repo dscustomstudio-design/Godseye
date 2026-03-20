@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>God's Eye V14</title>
-<script src="https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Cesium.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.105.0/Build/Cesium/Cesium.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/cesium@1.105.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@4.1.3/dist/satellite.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
@@ -331,7 +331,7 @@ const PROXY = u => `/proxy?url=${encodeURIComponent(u)}`;
 /* ══════════════════════════════════════════
    CESIUM — dark CARTO tiles, no ion deps
 ══════════════════════════════════════════ */
-Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI2NGZlNjg2NC1jYWMyLTQ1NWUtOWRhMC1lY2M1ZDhhMjkxYzYiLCJpZCI6NDA2NDU3LCJpYXQiOjE3NzM5NzcxMjF9.orUYOW542W3iH58N16aP0B95JBdrYAQgO88cqyV1LOQ';
+// No ion token needed - using free CARTO tiles only
 
 const viewer = new Cesium.Viewer('cesiumContainer', {
   imageryProvider: new Cesium.UrlTemplateImageryProvider({
@@ -340,23 +340,15 @@ const viewer = new Cesium.Viewer('cesiumContainer', {
     credit: '© OpenStreetMap contributors © CARTO',
     maximumLevel: 19,
   }),
-  terrain: Cesium.Terrain.fromWorldTerrain({
-    requestVertexNormals: true,
-    requestWaterMask: true,
-  }),
   baseLayerPicker: false, navigationHelpButton: true,
   homeButton: true, geocoder: false, sceneModePicker: true,
   timeline: true, animation: true, fullscreenButton: false,
   infoBox: false, selectionIndicator: false, shouldAnimate: true,
 });
-// Style the Cesium timeline bar to match dark theme
-const timelineEl = viewer.timeline.container;
-timelineEl.style.background = 'rgba(2,6,14,.95)';
-timelineEl.style.borderTop = '1px solid rgba(0,212,255,.18)';
 viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#020810');
-viewer.scene.globe.enableLighting = true;
+viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#04091a');
+viewer.scene.globe.enableLighting = false;
 viewer.scene.globe.showGroundAtmosphere = true;
-viewer.scene.globe.depthTestAgainstTerrain = false;
 viewer.scene.skyBox.show = true;
 viewer.scene.sun.show = true;
 viewer.scene.moon.show = true;
