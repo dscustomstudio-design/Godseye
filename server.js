@@ -20,6 +20,8 @@ const ALLOWED = [
   'opensky-network.org',
   'api.weather.gov',
   'www.nhc.noaa.gov',
+  'celestrak.org',
+  'celestrak.com',
 ];
 
 // ── PROXY  GET /proxy?url=<encoded-url>
