@@ -2,24 +2,25 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>God's Eye V11 — Live Intel</title>
-<script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>God's Eye V12</title>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Cesium.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/cesium@1.114.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-html,body,#map{height:100%;overflow:hidden;background:#000}
+html,body,#cesiumContainer{width:100%;height:100%;overflow:hidden;background:#000}
 :root{--g:#00ff9d;--c:#00d4ff;--r:#ff3b3b;--a:#ffc000;--p:#b06fff;
-  --panel:rgba(3,8,18,0.94);--border:rgba(0,200,255,0.15);}
-body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);}
-.panel{position:absolute;background:var(--panel);border:1px solid var(--border);border-radius:3px;
+  --panel:rgba(2,6,14,0.95);--border:rgba(0,212,255,0.18);}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:8888;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);}
+.panel{position:fixed;background:var(--panel);border:1px solid var(--border);border-radius:3px;
   font-family:'Share Tech Mono',monospace;color:var(--g);font-size:11px;}
-#hud{top:10px;left:10px;width:368px;max-height:calc(100vh - 42px);display:flex;flex-direction:column;overflow:hidden;}
+#hud{top:10px;left:10px;width:370px;max-height:calc(100vh - 44px);display:flex;flex-direction:column;overflow:hidden;z-index:100;}
 #hud-top{padding:9px 13px 7px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.sys-title{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;color:#fff;letter-spacing:4px;}
+.sys-title{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#fff;letter-spacing:4px;}
 .sys-sub{font-size:9px;color:var(--c);letter-spacing:1px;margin-top:1px;}
-.dot{width:7px;height:7px;border-radius:50%;background:#333;transition:background .3s;}
+.dot{width:7px;height:7px;border-radius:50%;background:#333;flex-shrink:0;}
 .dot.live{background:var(--g);animation:blink 1.4s infinite;}
 .dot.fetching{background:var(--a);animation:blink .5s infinite;}
 .dot.err{background:var(--r);}
@@ -27,22 +28,22 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 #search-wrap{padding:7px 10px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:4px;}
 #search{flex:1;background:rgba(0,255,157,.05);border:1px solid rgba(0,255,157,.18);border-radius:3px;
   color:var(--g);font-family:inherit;font-size:11px;padding:5px 8px;outline:none;}
-#search:focus{border-color:rgba(0,255,157,.55);}
-#search::placeholder{color:rgba(0,255,157,.28);}
-#search-btn{padding:5px 9px;border-radius:3px;border:1px solid rgba(0,255,157,.45);
-  background:rgba(0,255,157,.09);color:var(--g);font-family:inherit;font-size:10px;
-  cursor:pointer;letter-spacing:1px;transition:background .15s;white-space:nowrap;flex-shrink:0;}
-#search-btn:hover{background:rgba(0,255,157,.22);border-color:var(--g);}
+#search:focus{border-color:rgba(0,255,157,.6);}
+#search::placeholder{color:rgba(0,255,157,.3);}
+#search-btn{padding:5px 9px;border-radius:3px;border:1px solid rgba(0,255,157,.5);
+  background:rgba(0,255,157,.1);color:var(--g);font-family:inherit;font-size:10px;
+  cursor:pointer;letter-spacing:1px;transition:background .15s;white-space:nowrap;}
+#search-btn:hover{background:rgba(0,255,157,.25);}
 #date-range{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.2);border-radius:3px;
-  color:var(--c);font-family:inherit;font-size:10px;padding:4px 5px;outline:none;cursor:pointer;flex-shrink:0;}
+  color:var(--c);font-family:inherit;font-size:10px;padding:4px 5px;outline:none;cursor:pointer;}
 #date-range option{background:#060e1a;}
 #layer-bar{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .lyr-btn{padding:2px 7px;border-radius:2px;border:1px solid;cursor:pointer;font-family:inherit;
-  font-size:9px;font-weight:600;background:transparent;transition:opacity .15s;letter-spacing:.3px;}
+  font-size:9px;font-weight:600;background:transparent;transition:opacity .15s;}
 .lyr-btn.off{opacity:.2;}
 #src-filters{display:flex;flex-wrap:wrap;gap:3px;padding:5px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .src-btn{padding:2px 6px;border-radius:2px;border:1px solid;cursor:pointer;font-family:inherit;
-  font-size:9px;letter-spacing:.5px;font-weight:600;background:transparent;transition:opacity .15s;color:#fff;}
+  font-size:9px;font-weight:600;background:transparent;transition:opacity .15s;color:#fff;}
 .src-btn.off{opacity:.2;}
 #cat-filters{display:flex;flex-wrap:wrap;gap:3px;padding:4px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .cat-btn{display:flex;align-items:center;gap:3px;padding:2px 6px;border-radius:2px;
@@ -55,13 +56,20 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 #lbar{height:2px;background:linear-gradient(90deg,transparent,var(--c),transparent);
   background-size:200%;animation:sweep 1s linear infinite;display:none;flex-shrink:0;}
 @keyframes sweep{0%{background-position:200% 0}100%{background-position:-200% 0}}
+#debug-toggle{width:100%;padding:3px 10px;background:rgba(0,212,255,.04);border:none;
+  border-bottom:1px solid var(--border);color:var(--c);font-family:'Share Tech Mono',monospace;
+  font-size:9px;cursor:pointer;text-align:left;flex-shrink:0;}
+#debug-wrap{display:none;border-bottom:1px solid var(--border);flex-shrink:0;}
+#debug-wrap.show{display:block;}
+#debug-inner{padding:5px 10px;font-size:9px;max-height:88px;overflow-y:auto;line-height:1.6;}
+#debug-inner .ok{color:#00ff9d;}#debug-inner .fail{color:#ff3b3b;}#debug-inner .warn{color:#ffc000;}
 #event-list{overflow-y:auto;flex:1;}
 #event-list::-webkit-scrollbar{width:2px;}
 #event-list::-webkit-scrollbar-thumb{background:var(--border);}
 .ev{display:flex;align-items:flex-start;gap:7px;padding:6px 11px;cursor:pointer;
   border-left:2px solid transparent;transition:background .1s;}
 .ev:hover{background:rgba(0,255,157,.04);}
-.ev.sel{background:rgba(0,255,157,.07);border-left-color:var(--g);}
+.ev.sel{background:rgba(0,255,157,.08);border-left-color:var(--g);}
 .ev.threat{border-left-color:var(--r);}
 .ev.warn{border-left-color:var(--a);}
 .ev .ico{font-size:14px;flex-shrink:0;margin-top:1px;}
@@ -76,9 +84,9 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .ev .sbar{width:22px;flex-shrink:0;}
 .ev .sbar-fill{height:3px;border-radius:1px;background:var(--g);margin-top:7px;}
 .ev.threat .sbar-fill{background:var(--r);}
-.ev.warn  .sbar-fill{background:var(--a);}
-#empty{padding:18px 12px;color:rgba(0,255,157,.28);font-size:11px;}
-#ticker{top:10px;right:10px;width:265px;max-height:calc(100vh - 42px);display:flex;flex-direction:column;overflow:hidden;}
+.ev.warn .sbar-fill{background:var(--a);}
+#empty{padding:18px 12px;color:rgba(0,255,157,.3);font-size:11px;line-height:1.7;}
+#ticker{top:10px;right:10px;width:262px;max-height:calc(100vh - 44px);display:flex;flex-direction:column;overflow:hidden;z-index:100;}
 #ticker-head{padding:7px 11px;border-bottom:1px solid var(--border);font-family:'Rajdhani',sans-serif;
   font-size:13px;font-weight:600;color:var(--a);letter-spacing:2px;flex-shrink:0;
   display:flex;align-items:center;justify-content:space-between;}
@@ -95,37 +103,36 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 .tick .t-hl{font-size:9px;color:#bbb;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .tick .t-meta{font-size:8px;color:rgba(0,255,157,.28);margin-top:2px;}
-#wx-panel{position:absolute;bottom:32px;left:10px;width:230px;padding:8px 12px;font-size:9px;line-height:1.9;}
+#wx-panel{bottom:32px;left:10px;width:228px;padding:8px 12px;font-size:9px;line-height:1.9;z-index:100;}
 #wx-panel .wx-title{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--a);letter-spacing:1px;margin-bottom:4px;}
 .wx-row{display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,200,255,.07);padding:1px 0;}
 .wx-row span:last-child{color:#ddd;}
-#flight-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);
-  padding:4px 14px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--p);letter-spacing:1px;}
-#tooltip{position:fixed;background:rgba(2,7,16,.97);border:1px solid var(--c);border-radius:3px;
+#flight-badge{top:10px;left:50%;transform:translateX(-50%);padding:4px 14px;font-size:10px;color:var(--p);letter-spacing:1px;z-index:100;}
+#tooltip{position:fixed;background:rgba(1,5,12,.97);border:1px solid var(--c);border-radius:3px;
   padding:9px 12px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--c);
-  pointer-events:none;display:none;max-width:280px;line-height:1.8;z-index:9000;}
+  pointer-events:none;display:none;max-width:280px;line-height:1.8;z-index:9999;}
 #tooltip strong{color:#fff;font-size:11px;display:block;margin-bottom:4px;}
-#statusbar{position:absolute;bottom:0;left:0;right:0;height:24px;background:rgba(2,7,16,.94);
+#statusbar{position:fixed;bottom:0;left:0;right:0;height:24px;background:rgba(1,5,12,.95);
   border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:14px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.35);}
-#statusbar .sb-item span{color:var(--g);}
+  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.35);z-index:100;}
+#statusbar .val{color:var(--g);}
 #clock{margin-left:auto;color:var(--a);}
-#legend{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
-  display:flex;gap:10px;align-items:center;padding:4px 12px;
-  background:rgba(3,8,18,.9);border:1px solid var(--border);border-radius:3px;
-  font-family:'Share Tech Mono',monospace;font-size:9px;color:rgba(0,255,157,.45);white-space:nowrap;}
+#legend{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:10px;
+  align-items:center;padding:4px 12px;background:rgba(2,6,14,.92);border:1px solid var(--border);
+  border-radius:3px;font-family:'Share Tech Mono',monospace;font-size:9px;
+  color:rgba(0,255,157,.45);white-space:nowrap;z-index:100;}
 .leg{display:flex;align-items:center;gap:4px;}
 .leg-dot{width:7px;height:7px;border-radius:50%;}
 </style>
 </head>
 <body>
-<div id="map"></div>
+<div id="cesiumContainer"></div>
 
 <div class="panel" id="hud">
   <div id="hud-top">
     <div>
       <div class="sys-title">⬡ GOD'S EYE</div>
-      <div class="sys-sub">LIVE GLOBAL INTEL — V11</div>
+      <div class="sys-sub">LIVE GLOBAL INTEL — V12</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
       <span id="status-txt" style="font-size:9px;color:rgba(0,255,157,.4)">INIT</span>
@@ -133,7 +140,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     </div>
   </div>
   <div id="search-wrap">
-    <input id="search" type="text" placeholder="Search headlines, regions, callsigns…" autocomplete="off">
+    <input id="search" type="text" placeholder="Search headlines, locations, callsigns…" autocomplete="off">
     <button id="search-btn" onclick="runSearch()">⌕ RUN</button>
     <select id="date-range">
       <option value="1">24h</option>
@@ -144,42 +151,44 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
     </select>
   </div>
   <div id="layer-bar">
-    <button class="lyr-btn" id="lyr-news"    style="border-color:#00ff9d;color:#00ff9d"  onclick="toggleLayer('news')">📰 NEWS</button>
-    <button class="lyr-btn" id="lyr-flights" style="border-color:#b06fff;color:#b06fff"  onclick="toggleLayer('flights')">✈️ FLIGHTS</button>
-    <button class="lyr-btn" id="lyr-weather" style="border-color:#ffc000;color:#ffc000"  onclick="toggleLayer('weather')">🌩️ WX ALERTS</button>
-    <button class="lyr-btn" id="lyr-storms"  style="border-color:#ff6600;color:#ff6600"  onclick="toggleLayer('storms')">🌀 STORMS</button>
+    <button class="lyr-btn" id="lyr-news"    style="border-color:#00ff9d;color:#00ff9d" onclick="toggleLayer('news')">📰 NEWS</button>
+    <button class="lyr-btn" id="lyr-flights" style="border-color:#b06fff;color:#b06fff" onclick="toggleLayer('flights')">✈️ FLIGHTS</button>
+    <button class="lyr-btn" id="lyr-weather" style="border-color:#ffc000;color:#ffc000" onclick="toggleLayer('weather')">🌩 ALERTS</button>
+    <button class="lyr-btn" id="lyr-storms"  style="border-color:#ff6600;color:#ff6600" onclick="toggleLayer('storms')">🌀 STORMS</button>
   </div>
   <div id="src-filters">
-    <button class="src-btn" data-src="CNN"      style="border-color:#cc0000;background:#cc000015" onclick="toggleSrc('CNN')">CNN</button>
-    <button class="src-btn" data-src="FOX"      style="border-color:#2255bb;background:#2255bb15" onclick="toggleSrc('FOX')">FOX</button>
-    <button class="src-btn" data-src="BBC"      style="border-color:#bb1919;background:#bb191915" onclick="toggleSrc('BBC')">BBC</button>
-    <button class="src-btn" data-src="ALJAZ"    style="border-color:#009970;background:#00997015" onclick="toggleSrc('ALJAZ')">AL JAZ</button>
-    <button class="src-btn" data-src="NBC"      style="border-color:#fa8c00;background:#fa8c0015" onclick="toggleSrc('NBC')">NBC</button>
-    <button class="src-btn" data-src="REUTERS"  style="border-color:#ff6900;background:#ff690015" onclick="toggleSrc('REUTERS')">REUTERS</button>
+    <button class="src-btn" data-src="BBC"      style="border-color:#bb1919;background:#bb191912" onclick="toggleSrc('BBC')">BBC</button>
+    <button class="src-btn" data-src="CNN"      style="border-color:#cc0000;background:#cc000012" onclick="toggleSrc('CNN')">CNN</button>
+    <button class="src-btn" data-src="FOX"      style="border-color:#2255bb;background:#2255bb12" onclick="toggleSrc('FOX')">FOX</button>
+    <button class="src-btn" data-src="ALJAZ"    style="border-color:#009970;background:#00997012" onclick="toggleSrc('ALJAZ')">AL JAZ</button>
+    <button class="src-btn" data-src="NBC"      style="border-color:#fa8c00;background:#fa8c0012" onclick="toggleSrc('NBC')">NBC</button>
+    <button class="src-btn" data-src="REUTERS"  style="border-color:#ff6900;background:#ff690012" onclick="toggleSrc('REUTERS')">REUTERS</button>
     <button class="src-btn" data-src="AP"       style="border-color:#aaa;background:#aaa1"        onclick="toggleSrc('AP')">AP</button>
-    <button class="src-btn" data-src="GUARDIAN" style="border-color:#005689;background:#00568915" onclick="toggleSrc('GUARDIAN')">GUARDIAN</button>
-    <button class="src-btn" data-src="NOAA"     style="border-color:#ffc000;background:#ffc00015" onclick="toggleSrc('NOAA')">NOAA</button>
-    <button class="src-btn" data-src="OPENSKY"  style="border-color:#b06fff;background:#b06fff15" onclick="toggleSrc('OPENSKY')">OPENSKY</button>
+    <button class="src-btn" data-src="GUARDIAN" style="border-color:#005689;background:#00568912" onclick="toggleSrc('GUARDIAN')">GUARDIAN</button>
+    <button class="src-btn" data-src="NOAA"     style="border-color:#ffc000;background:#ffc00012" onclick="toggleSrc('NOAA')">NOAA</button>
+    <button class="src-btn" data-src="OPENSKY"  style="border-color:#b06fff;background:#b06fff12" onclick="toggleSrc('OPENSKY')">OPENSKY</button>
   </div>
   <div id="cat-filters">
     <button class="cat-btn" data-cat="military"  onclick="toggleCat('military')">🪖 Military</button>
     <button class="cat-btn" data-cat="conflict"  onclick="toggleCat('conflict')">⚔️ Conflict</button>
     <button class="cat-btn" data-cat="naval"     onclick="toggleCat('naval')">🚢 Naval</button>
     <button class="cat-btn" data-cat="aviation"  onclick="toggleCat('aviation')">✈️ Aviation</button>
-    <button class="cat-btn" data-cat="weather"   onclick="toggleCat('weather')">🌩️ Weather</button>
+    <button class="cat-btn" data-cat="weather"   onclick="toggleCat('weather')">🌩 Weather</button>
     <button class="cat-btn" data-cat="disaster"  onclick="toggleCat('disaster')">🌊 Disaster</button>
-    <button class="cat-btn" data-cat="politics"  onclick="toggleCat('politics')">🏛️ Politics</button>
+    <button class="cat-btn" data-cat="politics"  onclick="toggleCat('politics')">🏛 Politics</button>
     <button class="cat-btn" data-cat="economy"   onclick="toggleCat('economy')">📈 Economy</button>
     <button class="cat-btn" data-cat="breaking"  onclick="toggleCat('breaking')">🔴 Breaking</button>
   </div>
   <div id="stats">
-    <div class="sb-item">News: <span id="ct-news">0</span></div>
-    <div class="sb-item">Flights: <span id="ct-flights">0</span></div>
-    <div class="sb-item">WX Alerts: <span id="ct-alerts">0</span></div>
-    <div class="sb-item">Storms: <span id="ct-storms">0</span></div>
+    <div>News: <span id="ct-news">0</span></div>
+    <div>Flights: <span id="ct-flights">0</span></div>
+    <div>WX: <span id="ct-alerts">0</span></div>
+    <div>Storms: <span id="ct-storms">0</span></div>
   </div>
+  <button id="debug-toggle" onclick="toggleDebug()">▶ FEED DEBUG LOG</button>
+  <div id="debug-wrap"><div id="debug-inner"></div></div>
   <div id="lbar"></div>
-  <div id="event-list"><div id="empty">Initialising intel feeds…</div></div>
+  <div id="event-list"><div id="empty">⟳ Initialising intel feeds…</div></div>
 </div>
 
 <div class="panel" id="ticker">
@@ -198,18 +207,18 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 
 <div class="panel" id="wx-panel">
   <div class="wx-title">🌡 SURFACE CONDITIONS</div>
-  <div id="wx-rows"><div style="color:rgba(0,255,157,.3);font-size:9px">Fetching NOAA…</div></div>
+  <div id="wx-rows"><div style="color:rgba(0,255,157,.3)">Fetching NOAA…</div></div>
 </div>
 
 <div id="tooltip"></div>
 
 <div id="statusbar">
-  <div class="sb-item">SYS: <span>ONLINE</span></div>
-  <div class="sb-item">NEWS: <span id="sb-news">–</span></div>
-  <div class="sb-item">FLIGHTS: <span id="sb-flights">–</span></div>
-  <div class="sb-item">NOAA: <span id="sb-noaa">–</span></div>
-  <div class="sb-item">UPDATED: <span id="sb-ref">–</span></div>
-  <div id="clock">──</div>
+  <span>SYS: <span class="val">ONLINE</span></span>
+  <span>NEWS: <span class="val" id="sb-news">–</span></span>
+  <span>FLIGHTS: <span class="val" id="sb-flights">–</span></span>
+  <span>NOAA: <span class="val" id="sb-noaa">–</span></span>
+  <span>UPDATED: <span class="val" id="sb-ref">–</span></span>
+  <span id="clock">──</span>
 </div>
 
 <div id="legend">
@@ -222,18 +231,41 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
 </div>
 
 <script>
-const PROXY = u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+const PROXY = u => `/api/proxy?url=${encodeURIComponent(u)}`;
+
+Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc4ZDkiLCJpZCI6NTc3MzMsImlhdCI6MTYyMzMxNzg3N30.EcK_1XusvHCBdHiMQFNnEItF1TxB8bvdPnFXmCr3EfI';
+
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  imageryProvider: new Cesium.UrlTemplateImageryProvider({
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    subdomains: ['a','b','c','d'],
+    credit: '© OpenStreetMap contributors © CARTO',
+    maximumLevel: 19,
+  }),
+  baseLayerPicker:false, navigationHelpButton:false, homeButton:false,
+  geocoder:false, sceneModePicker:false, timeline:false, animation:false,
+  fullscreenButton:false, infoBox:false, selectionIndicator:false, shouldAnimate:true,
+  creditContainer: document.createElement('div'),
+});
+viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#020810');
+viewer.scene.globe.enableLighting = false;
+viewer.scene.globe.showGroundAtmosphere = false;
+viewer.scene.skyBox.show = false;
+viewer.scene.sun.show = false;
+viewer.scene.moon.show = false;
+viewer.scene.skyAtmosphere.show = false;
+viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(15, 20, 19000000), duration: 0 });
 
 const RSS_FEEDS = [
-  {id:'BBC',     label:'BBC World',    color:'#bb1919', url:'https://feeds.bbci.co.uk/news/world/rss.xml'},
-  {id:'ALJAZ',   label:'Al Jazeera',   color:'#009970', url:'https://www.aljazeera.com/xml/rss/all.xml'},
-  {id:'REUTERS', label:'Reuters',      color:'#ff6900', url:'https://feeds.reuters.com/reuters/worldNews'},
-  {id:'CNN',     label:'CNN World',    color:'#cc0000', url:'https://rss.cnn.com/rss/edition_world.rss'},
-  {id:'CNN',     label:'CNN Top',      color:'#cc0000', url:'https://rss.cnn.com/rss/edition.rss'},
-  {id:'NBC',     label:'NBC News',     color:'#fa8c00', url:'https://feeds.nbcnews.com/nbcnews/public/world'},
-  {id:'AP',      label:'AP News',      color:'#aaaaaa', url:'https://rsshub.app/apnews/topics/ap-top-news'},
-  {id:'GUARDIAN',label:'The Guardian', color:'#005689', url:'https://www.theguardian.com/world/rss'},
-  {id:'FOX',     label:'Fox News',     color:'#2255bb', url:'https://moxie.foxnews.com/google-publisher/world.xml'},
+  { id:'BBC',      label:'BBC World',    color:'#bb1919', url:'https://feeds.bbci.co.uk/news/world/rss.xml' },
+  { id:'REUTERS',  label:'Reuters',      color:'#ff6900', url:'https://feeds.reuters.com/reuters/worldNews' },
+  { id:'CNN',      label:'CNN World',    color:'#cc0000', url:'https://rss.cnn.com/rss/edition_world.rss' },
+  { id:'CNN',      label:'CNN Top',      color:'#cc0000', url:'https://rss.cnn.com/rss/edition.rss' },
+  { id:'ALJAZ',    label:'Al Jazeera',   color:'#009970', url:'https://www.aljazeera.com/xml/rss/all.xml' },
+  { id:'NBC',      label:'NBC News',     color:'#fa8c00', url:'https://feeds.nbcnews.com/nbcnews/public/world' },
+  { id:'AP',       label:'AP News',      color:'#aaaaaa', url:'https://rsshub.app/apnews/topics/ap-top-news' },
+  { id:'GUARDIAN', label:'The Guardian', color:'#005689', url:'https://www.theguardian.com/world/rss' },
+  { id:'FOX',      label:'Fox News',     color:'#2255bb', url:'https://moxie.foxnews.com/google-publisher/world.xml' },
 ];
 
 const GEO = {
@@ -300,12 +332,12 @@ const CAT_RX = {
   economy:  /economy|gdp|inflation|market|stock|oil|gas|trade|tariff|bank|currency|recession|financial|rate/i,
   breaking: /breaking|urgent|alert|developing|just in/i,
 };
-const CAT_ICONS={naval:'🚢',aviation:'✈️',military:'🪖',conflict:'⚔️',weather:'🌩️',disaster:'🌊',politics:'🏛️',economy:'📈',breaking:'🔴',general:'📰'};
+const CAT_ICONS={naval:'🚢',aviation:'✈️',military:'🪖',conflict:'⚔️',weather:'🌩',disaster:'🌊',politics:'🏛',economy:'📈',breaking:'🔴',general:'📰'};
 const SEV_COLOR={naval:'#b06fff',aviation:'#b06fff',military:'#ff3b3b',conflict:'#ff3b3b',weather:'#ffc000',disaster:'#ffc000',breaking:'#ff6600',politics:'#00d4ff',economy:'#00d4ff',general:'#00ff9d'};
 
-function assignVehicle(cat,geoName){
+function assignVehicle(cat,geo){
   const coastal=/sea|ocean|strait|gulf|bay|port|coast|mediterranean|atlantic|pacific|caribbean|persian|hormuz|aden|malacca/i;
-  const ic=coastal.test(geoName||'');
+  const ic=coastal.test(geo||'');
   if(cat==='naval')    return{icon:'🚢',type:'ship',  label:'Naval Vessel',  color:'#00d4ff'};
   if(cat==='aviation') return{icon:'✈️',type:'plane', label:'Aircraft',      color:'#b06fff'};
   if(cat==='military'&&ic) return Math.random()>.4?{icon:'🚢',type:'ship',label:'Warship',color:'#ff3b3b'}:{icon:'✈️',type:'plane',label:'Military AC',color:'#ff3b3b'};
@@ -323,27 +355,33 @@ let layers={news:true,flights:true,weather:true,storms:true};
 let searchQ='',dayRange=30,selectedId=null,tickerTab='news';
 let liveFlights=[],wxAlerts=[],storms=[];
 
-const viewer=new Cesium.Viewer('map',{
-  shouldAnimate:true,baseLayerPicker:false,navigationHelpButton:false,
-  homeButton:false,geocoder:false,sceneModePicker:false,
-  timeline:false,animation:false,fullscreenButton:false,
-  infoBox:false,selectionIndicator:false,
-});
-viewer.scene.backgroundColor=Cesium.Color.BLACK;
-try{viewer.scene.globe.baseColor=Cesium.Color.fromCssColorString('#04091a');}catch(e){}
-viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(20,15,18500000),duration:0});
+const dbg=[];
+function log(cls,msg){
+  dbg.unshift({cls,msg,t:new Date().toLocaleTimeString()});
+  if(dbg.length>50)dbg.pop();
+  const el=document.getElementById('debug-inner');
+  if(el)el.innerHTML=dbg.map(d=>`<div class="${d.cls}">[${d.t}] ${d.msg}</div>`).join('');
+}
+function toggleDebug(){
+  const w=document.getElementById('debug-wrap');
+  const b=document.getElementById('debug-toggle');
+  w.classList.toggle('show');
+  b.textContent=w.classList.contains('show')?'▼ FEED DEBUG LOG':'▶ FEED DEBUG LOG';
+}
 
 async function fetchRSS(){
-  const results=[];let ok=0;
+  const results=[]; let ok=0;
   await Promise.allSettled(RSS_FEEDS.map(async src=>{
     try{
-      const raw=await fetch(PROXY(src.url),{signal:AbortSignal.timeout(15000)});
-      if(!raw.ok)return;
-      const txt=await raw.text();
+      log('warn',`Fetching ${src.label}…`);
+      const res=await fetch(PROXY(src.url),{signal:AbortSignal.timeout(15000)});
+      if(!res.ok){log('fail',`${src.label}: HTTP ${res.status}`);return;}
+      const txt=await res.text();
       const doc=new DOMParser().parseFromString(txt,'text/xml');
       const items=[...doc.querySelectorAll('item')];
-      if(!items.length)return;
+      if(!items.length){log('fail',`${src.label}: 0 items`);return;}
       ok++;
+      log('ok',`${src.label}: ${items.length} items`);
       items.slice(0,30).forEach(el=>{
         const title=(el.querySelector('title')?.textContent||'').replace(/<!\[CDATA\[|\]\]>/g,'').trim();
         const desc =(el.querySelector('description')?.textContent||'').replace(/<[^>]+>/g,'').replace(/<!\[CDATA\[|\]\]>/g,'').slice(0,300);
@@ -351,14 +389,12 @@ async function fetchRSS(){
         const pub  =el.querySelector('pubDate')?.textContent||'';
         if(!title)return;
         const text=title+' '+desc;
-        const geo=detectGeo(text);
-        const cat=detectCat(text);
-        const sev=calcSev(text,cat);
-        const ts =pub?new Date(pub).getTime():Date.now();
+        const geo=detectGeo(text),cat=detectCat(text),sev=calcSev(text,cat);
+        const ts=pub?new Date(pub).getTime():Date.now();
         const veh=geo?assignVehicle(cat,geo.name):null;
         results.push({id:uid(),src:src.id,srcLabel:src.label,srcColor:src.color,headline:title,text,geo,cat,sev,ts,link,veh});
       });
-    }catch(e){}
+    }catch(e){log('fail',`${src.label}: ${e.message}`);}
   }));
   document.getElementById('sb-news').textContent=`${ok}/${RSS_FEEDS.length} feeds`;
   return results;
@@ -366,29 +402,34 @@ async function fetchRSS(){
 
 async function fetchFlights(){
   try{
+    log('warn','Fetching OpenSky…');
     const url='https://opensky-network.org/api/states/all?lamin=-60&lomin=-180&lamax=75&lomax=180';
     const res=await fetch(PROXY(url),{signal:AbortSignal.timeout(20000)});
+    if(!res.ok){log('fail',`OpenSky: HTTP ${res.status}`);return[];}
     const json=await res.json();
-    if(!json||!json.states)return[];
+    if(!json||!json.states){log('fail','OpenSky: no states');return[];}
     const flights=json.states.filter(s=>s[5]!=null&&s[6]!=null&&!s[8]).slice(0,500).map(s=>({
       icao:(s[0]||'').trim(),callsign:(s[1]||'N/A').trim(),country:s[2]||'',
       lon:s[5],lat:s[6],alt:Math.round((s[7]||s[13]||0)*3.281),
       speed:s[9]?Math.round(s[9]*1.944)+'kn':null,heading:s[10]?Math.round(s[10])+'°':null,
     }));
+    log('ok',`OpenSky: ${flights.length} aircraft`);
     document.getElementById('sb-flights').textContent=flights.length+' ac';
     document.getElementById('live-flight-ct').textContent=flights.length;
     document.getElementById('ct-flights').textContent=flights.length;
     return flights;
-  }catch(e){document.getElementById('sb-flights').textContent='ERR';return[];}
+  }catch(e){log('fail','OpenSky: '+e.message);document.getElementById('sb-flights').textContent='ERR';return[];}
 }
 
 async function fetchNOAAAlerts(){
   try{
+    log('warn','Fetching NOAA alerts…');
     const url='https://api.weather.gov/alerts/active?status=actual&urgency=Immediate,Expected';
     const res=await fetch(PROXY(url),{signal:AbortSignal.timeout(14000)});
+    if(!res.ok){log('fail',`NOAA: HTTP ${res.status}`);return[];}
     const json=await res.json();
-    if(!json.features)return[];
-    return json.features.slice(0,100).map(f=>{
+    if(!json.features){log('fail','NOAA: no features');return[];}
+    const alerts=json.features.slice(0,100).map(f=>{
       const p=f.properties;
       let lat=null,lon=null;
       const coords=f.geometry?.coordinates;
@@ -397,7 +438,9 @@ async function fetchNOAAAlerts(){
       return{id:'wx_'+uid(),event:p.event||'Alert',headline:(p.headline||p.event||'NOAA Alert').slice(0,120),
         severity:p.severity||'Unknown',urgency:p.urgency||'',area:(p.areaDesc||'').slice(0,60),lat,lon,ts:Date.now()};
     }).filter(a=>a.lat&&a.lon);
-  }catch(e){return[];}
+    log('ok',`NOAA alerts: ${alerts.length}`);
+    return alerts;
+  }catch(e){log('fail','NOAA: '+e.message);return[];}
 }
 
 async function fetchNOAAStorms(){
@@ -405,6 +448,7 @@ async function fetchNOAAStorms(){
   for(const feed of['https://www.nhc.noaa.gov/nhc_at1.xml','https://www.nhc.noaa.gov/nhc_ep1.xml']){
     try{
       const res=await fetch(PROXY(feed),{signal:AbortSignal.timeout(12000)});
+      if(!res.ok)continue;
       const txt=await res.text();
       const doc=new DOMParser().parseFromString(txt,'text/xml');
       [...doc.querySelectorAll('item')].forEach(el=>{
@@ -419,6 +463,7 @@ async function fetchNOAAStorms(){
       });
     }catch(e){}
   }
+  log(all.length?'ok':'warn',`NHC storms: ${all.length}`);
   return all;
 }
 
@@ -427,28 +472,29 @@ async function fetchNOAAConditions(){
   const results=[];
   await Promise.allSettled(WX_STATIONS.map(async st=>{
     try{
-      const url=`https://api.weather.gov/stations/${st.id}/observations/latest`;
-      const res=await fetch(PROXY(url),{signal:AbortSignal.timeout(10000)});
+      const res=await fetch(PROXY(`https://api.weather.gov/stations/${st.id}/observations/latest`),{signal:AbortSignal.timeout(10000)});
+      if(!res.ok)return;
       const json=await res.json();
       const p=json.properties;
       if(p){
         const tempC=p.temperature?.value;
         const tempF=tempC!=null?Math.round(tempC*9/5+32):null;
         const wind=p.windSpeed?.value?Math.round(p.windSpeed.value*0.621)+' mph':null;
-        const cond=(p.textDescription||'').slice(0,18)||'–';
-        results.push({name:st.name,tempF,wind,cond});
+        results.push({name:st.name,tempF,wind,cond:(p.textDescription||'').slice(0,18)||'–'});
       }
     }catch(e){}
   }));
   const rows=document.getElementById('wx-rows');
+  if(!rows)return;
   rows.innerHTML=results.length
-    ?results.map(r=>`<div class="wx-row"><span>${r.name}</span><span style="font-size:9px">${r.tempF!=null?r.tempF+'°F':''} ${r.wind||''} ${r.cond}</span></div>`).join('')
-    :'<div style="color:rgba(255,150,0,.5);font-size:9px">NOAA conditions unavailable</div>';
+    ?results.map(r=>`<div class="wx-row"><span>${r.name}</span><span>${r.tempF!=null?r.tempF+'°F':''} ${r.wind||''} ${r.cond}</span></div>`).join('')
+    :'<div style="color:rgba(255,150,0,.5)">NOAA unavailable</div>';
 }
 
 async function fetchAll(){
   setStatus('fetching');
   document.getElementById('lbar').style.display='block';
+  log('warn','=== Starting full fetch ===');
   const[rssR,flightR,alertR,stormR]=await Promise.allSettled([fetchRSS(),fetchFlights(),fetchNOAAAlerts(),fetchNOAAStorms()]);
   fetchNOAAConditions();
   const raw=rssR.status==='fulfilled'?rssR.value:[];
@@ -460,19 +506,19 @@ async function fetchAll(){
   document.getElementById('ct-news').textContent=allEvents.length;
   document.getElementById('ct-alerts').textContent=wxAlerts.length;
   document.getElementById('ct-storms').textContent=storms.length;
-  document.getElementById('sb-noaa').textContent=`${wxAlerts.length}al/${storms.length}st`;
+  document.getElementById('sb-noaa').textContent=wxAlerts.length+' alerts';
   document.getElementById('sb-ref').textContent=new Date().toLocaleTimeString();
   document.getElementById('lbar').style.display='none';
+  log('ok',`Done — ${allEvents.length} stories, ${liveFlights.length} flights, ${wxAlerts.length} wx`);
   setStatus(allEvents.length||liveFlights.length?'live':'err');
   renderNewsMap();renderFlights();renderWeather();renderList();renderTicker();
 }
 
-const SEV_COLOR_MAP=SEV_COLOR;
 function renderNewsMap(){
   Object.values(newsEnts).forEach(e=>viewer.entities.remove(e));newsEnts={};
   vehicleEnts.forEach(e=>viewer.entities.remove(e));vehicleEnts=[];
   if(!layers.news)return;
-  const visible=getFilteredNews();
+  const visible=getFiltered();
   const groups={};
   visible.forEach(ev=>{
     if(!ev.geo)return;
@@ -528,37 +574,25 @@ function renderWeather(){
       if(!a.lat||!a.lon)return;
       const sev=a.severity==='Extreme'?10:a.severity==='Severe'?8:a.severity==='Moderate'?6:4;
       const col=Cesium.Color.fromCssColorString(sev>=8?'#ff3b3b':'#ffc000');
-      weatherEnts.push(viewer.entities.add({
-        id:'wa_'+a.id,_alert:a,_isAlert:true,
-        position:Cesium.Cartesian3.fromDegrees(a.lon,a.lat),
-        ellipse:{semiMajorAxis:80000+sev*15000,semiMinorAxis:80000+sev*15000,material:col.withAlpha(.18),outline:true,outlineColor:col.withAlpha(.6),outlineWidth:1,height:0},
-        point:{pixelSize:7,color:col,outlineColor:Cesium.Color.BLACK.withAlpha(.5),outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY},
-        label:{text:`⚠️ ${(a.event||'').slice(0,22)}`,font:'9px "Share Tech Mono"',fillColor:col,outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,backgroundColor:new Cesium.Color(.05,.02,.02,.9),backgroundPadding:new Cesium.Cartesian2(4,2),disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true},
-      }));
+      weatherEnts.push(viewer.entities.add({id:'wa_'+a.id,_alert:a,_isAlert:true,position:Cesium.Cartesian3.fromDegrees(a.lon,a.lat),ellipse:{semiMajorAxis:80000+sev*15000,semiMinorAxis:80000+sev*15000,material:col.withAlpha(.18),outline:true,outlineColor:col.withAlpha(.6),outlineWidth:1,height:0},point:{pixelSize:7,color:col,outlineColor:Cesium.Color.BLACK.withAlpha(.5),outlineWidth:1,disableDepthTestDistance:Number.POSITIVE_INFINITY},label:{text:`⚠️ ${(a.event||'').slice(0,22)}`,font:'9px "Share Tech Mono"',fillColor:col,outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-16),showBackground:true,backgroundColor:new Cesium.Color(.05,.02,.02,.9),backgroundPadding:new Cesium.Cartesian2(4,2),disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true}}));
     });
   }
   if(layers.storms&&activeSrcs.has('NOAA')){
     storms.forEach(s=>{
       if(!s.lat||!s.lon)return;
       const col=Cesium.Color.fromCssColorString('#ff6600');
-      weatherEnts.push(viewer.entities.add({
-        id:'st_'+s.id,_storm:s,_isStorm:true,
-        position:Cesium.Cartesian3.fromDegrees(s.lon,s.lat),
-        ellipse:{semiMajorAxis:350000,semiMinorAxis:350000,material:col.withAlpha(.15),outline:true,outlineColor:col.withAlpha(.75),outlineWidth:2,height:0},
-        point:{pixelSize:11,color:col,outlineColor:Cesium.Color.WHITE.withAlpha(.4),outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY},
-        label:{text:`🌀 ${s.title.slice(0,28)}`,font:'10px "Share Tech Mono"',fillColor:col,outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-22),showBackground:true,backgroundColor:new Cesium.Color(.05,.02,.0,.92),backgroundPadding:new Cesium.Cartesian2(5,3),disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true},
-      }));
+      weatherEnts.push(viewer.entities.add({id:'st_'+s.id,_storm:s,_isStorm:true,position:Cesium.Cartesian3.fromDegrees(s.lon,s.lat),ellipse:{semiMajorAxis:350000,semiMinorAxis:350000,material:col.withAlpha(.15),outline:true,outlineColor:col.withAlpha(.75),outlineWidth:2,height:0},point:{pixelSize:11,color:col,outlineColor:Cesium.Color.WHITE.withAlpha(.4),outlineWidth:2,disableDepthTestDistance:Number.POSITIVE_INFINITY},label:{text:`🌀 ${s.title.slice(0,28)}`,font:'10px "Share Tech Mono"',fillColor:col,outlineColor:Cesium.Color.BLACK,outlineWidth:2,style:Cesium.LabelStyle.FILL_AND_OUTLINE,pixelOffset:new Cesium.Cartesian2(0,-22),showBackground:true,backgroundColor:new Cesium.Color(.05,.02,.0,.92),backgroundPadding:new Cesium.Cartesian2(5,3),disableDepthTestDistance:Number.POSITIVE_INFINITY,show:true}}));
     });
   }
 }
 
 function renderList(){
-  const filtered=getFilteredNews();
+  const filtered=getFiltered();
   const list=document.getElementById('event-list');
   const empty=document.getElementById('empty');
   if(!filtered.length){
     list.innerHTML='';empty.style.display='block';
-    empty.textContent=allEvents.length?`No results for "${searchQ||'current filters'}" — try clearing filters or changing date range.`:'Fetching RSS feeds…';
+    empty.textContent=allEvents.length?`No results for "${searchQ||'current filters'}" — try adjusting filters or date range.`:'⟳ Fetching RSS feeds…\n\nOpen ▶ FEED DEBUG LOG above to see live status.';
     return;
   }
   empty.style.display='none';
@@ -587,27 +621,12 @@ function renderList(){
 function renderTicker(){
   const el=document.getElementById('ticker-list');
   if(tickerTab==='news'){
-    el.innerHTML=allEvents.slice(0,80).map(ev=>
-      `<div class="tick" onclick="selectEvent('${ev.id}')">
-        <div class="t-src" style="color:${ev.srcColor}">${CAT_ICONS[ev.cat]||'📰'} ${ev.srcLabel} ${ev.veh?ev.veh.icon:''}</div>
-        <div class="t-hl">${esc(ev.headline)}</div>
-        <div class="t-meta">${new Date(ev.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'})}${ev.geo?' · 📍'+ev.geo.name:''}</div>
-      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">Fetching feeds…</div>';
+    el.innerHTML=allEvents.slice(0,80).map(ev=>`<div class="tick" onclick="selectEvent('${ev.id}')"><div class="t-src" style="color:${ev.srcColor}">${CAT_ICONS[ev.cat]||'📰'} ${ev.srcLabel} ${ev.veh?ev.veh.icon:''}</div><div class="t-hl">${esc(ev.headline)}</div><div class="t-meta">${new Date(ev.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'})}${ev.geo?' · 📍'+ev.geo.name:''}</div></div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">Fetching…</div>';
   }else if(tickerTab==='flights'){
-    el.innerHTML=liveFlights.slice(0,80).map(f=>
-      `<div class="tick">
-        <div class="t-src" style="color:#b06fff">✈️ ${f.callsign||f.icao}</div>
-        <div class="t-hl">${f.country} · ${f.alt?f.alt+'ft':''} ${f.speed||''} ${f.heading||''}</div>
-        <div class="t-meta">${f.lat.toFixed(2)}°, ${f.lon.toFixed(2)}°</div>
-      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No flight data yet</div>';
+    el.innerHTML=liveFlights.slice(0,80).map(f=>`<div class="tick"><div class="t-src" style="color:#b06fff">✈️ ${f.callsign||f.icao}</div><div class="t-hl">${f.country} · ${f.alt?f.alt+'ft':''} ${f.speed||''} ${f.heading||''}</div><div class="t-meta">${f.lat.toFixed(2)}°, ${f.lon.toFixed(2)}°</div></div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No flight data</div>';
   }else{
     const all=[...wxAlerts.map(a=>({icon:'⚠️',color:'#ffc000',title:a.event,sub:a.area,sev:a.severity})),...storms.map(s=>({icon:'🌀',color:'#ff6600',title:s.title,sub:'NHC Active Storm',sev:'Extreme'}))];
-    el.innerHTML=all.slice(0,60).map(a=>
-      `<div class="tick">
-        <div class="t-src" style="color:${a.color}">${a.icon} NOAA · ${a.sev}</div>
-        <div class="t-hl">${esc(a.title)}</div>
-        <div class="t-meta">${esc(a.sub)}</div>
-      </div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No active weather alerts</div>';
+    el.innerHTML=all.slice(0,60).map(a=>`<div class="tick"><div class="t-src" style="color:${a.color}">${a.icon} NOAA · ${a.sev}</div><div class="t-hl">${esc(a.title)}</div><div class="t-meta">${esc(a.sub)}</div></div>`).join('')||'<div class="tick" style="color:rgba(0,255,157,.3);padding:12px">No active alerts</div>';
   }
 }
 
@@ -617,7 +636,7 @@ function switchTab(tab){
   renderTicker();
 }
 
-function getFilteredNews(){
+function getFiltered(){
   const q=searchQ.toLowerCase().trim();
   const cut=Date.now()-dayRange*86400000;
   return allEvents.filter(ev=>{
@@ -645,10 +664,9 @@ function calcSev(text,cat){
   if(/hundreds|thousands|dozens/i.test(text))s+=1;
   return Math.min(s,10);
 }
-
 function makePinCanvas(icon,color,selected){
-  const s=selected?36:26;
-  const c=document.createElement('canvas');c.width=s;c.height=s;
+  const s=selected?36:26,c=document.createElement('canvas');
+  c.width=s;c.height=s;
   const ctx=c.getContext('2d');
   ctx.beginPath();ctx.arc(s/2,s/2,s/2-1,0,Math.PI*2);
   ctx.fillStyle=selected?'rgba(255,255,255,.2)':'rgba(0,0,0,.65)';ctx.fill();
@@ -656,7 +674,6 @@ function makePinCanvas(icon,color,selected){
   ctx.font=`${Math.round(s*.44)}px serif`;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(icon,s/2,s/2+1);return c;
 }
-
 function setStatus(s){
   document.getElementById('status-dot').className='dot '+(s==='live'?'live':s==='fetching'?'fetching':'err');
   document.getElementById('status-txt').textContent=s.toUpperCase();
@@ -699,7 +716,7 @@ function runSearch(){
   searchQ=document.getElementById('search').value.trim();
   renderNewsMap();renderList();
   const btn=document.getElementById('search-btn');
-  const n=getFilteredNews().length;
+  const n=getFiltered().length;
   btn.textContent=`✓ ${n} found`;
   btn.style.borderColor='var(--g)';btn.style.background='rgba(0,255,157,.2)';
   setTimeout(()=>{btn.textContent='⌕ RUN';btn.style.borderColor='';btn.style.background='';},2000);
@@ -717,10 +734,10 @@ viewer.screenSpaceEventHandler.setInputAction(click=>{
 viewer.screenSpaceEventHandler.setInputAction(move=>{
   const p=viewer.scene.pick(move.endPosition);
   let html=null;
-  if(p?.id?._isFlight){const f=p.id._flight;html=`<strong>✈️ ${f.callsign||f.icao}</strong>${f.country}<br>Alt: ${f.alt?f.alt+'ft':'–'} · Speed: ${f.speed||'–'} · Hdg: ${f.heading||'–'}`;}
-  else if(p?.id?._isAlert){const a=p.id._alert;html=`<strong>⚠️ ${a.event}</strong>${a.area}<br>Severity: ${a.severity} · ${a.urgency}`;}
+  if(p?.id?._isFlight){const f=p.id._flight;html=`<strong>✈️ ${f.callsign||f.icao}</strong>${f.country}<br>Alt: ${f.alt?f.alt+'ft':'–'} · ${f.speed||'–'} · Hdg: ${f.heading||'–'}`;}
+  else if(p?.id?._isAlert){const a=p.id._alert;html=`<strong>⚠️ ${a.event}</strong>${a.area}<br>Severity: ${a.severity}`;}
   else if(p?.id?._isStorm){const s=p.id._storm;html=`<strong>🌀 ${s.title}</strong>${s.desc.slice(0,140)}`;}
-  else if(p?.id?._evId){const ev=allEvents.find(e=>e.id===p.id._evId);if(ev)html=`<strong>${ev.veh?.icon||''} ${ev.veh?.label||'Event'}</strong><span style="color:${ev.srcColor}">[${ev.src}]</span> ${esc(ev.headline.slice(0,90))}${ev.geo?`<br>📍 ${ev.geo.name}`:''}`;}
+  else if(p?.id?._evId){const ev=allEvents.find(e=>e.id===p.id._evId);if(ev)html=`<strong>${ev.veh?.icon||''} ${ev.veh?.label||'Event'}</strong><span style="color:${ev.srcColor}">[${ev.src}]</span> ${esc(ev.headline.slice(0,90))}${ev.geo?`<br>📍 ${ev.geo.name}`:'`}`;}
   else if(p?.id?._evIds){const evs=allEvents.filter(e=>p.id._evIds.includes(e.id)).slice(0,5);if(evs.length)html=`<strong>📍 ${evs[0].geo?.name?.toUpperCase()||''} — ${evs.length} stories</strong>`+evs.map(e=>`<span style="color:${e.srcColor}">[${e.src}]</span> ${esc(e.headline.slice(0,55))}…`).join('<br>');}
   if(html){tip.innerHTML=html;tip.style.display='block';tip.style.left=(move.endPosition.x+14)+'px';tip.style.top=(move.endPosition.y-14)+'px';}
   else tip.style.display='none';
@@ -729,7 +746,7 @@ viewer.screenSpaceEventHandler.setInputAction(move=>{
 setInterval(()=>{document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');},1000);
 document.getElementById('clock').textContent=new Date().toUTCString().replace('GMT','UTC');
 
-fetchAll();
+window.addEventListener('load',()=>{toggleDebug();fetchAll();});
 setInterval(fetchAll,10*60*1000);
 setInterval(()=>{fetchFlights().then(f=>{liveFlights=f;renderFlights();renderTicker();});},60*1000);
 </script>
